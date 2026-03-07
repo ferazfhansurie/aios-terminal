@@ -11,11 +11,20 @@ declare global {
       sendPtyInput: (data: string) => void
       resizePty: (cols: number, rows: number) => void
       sendCommand: (cmd: string) => void
+      replayPty: () => Promise<string>
       getClaudeDir: () => Promise<any>
       readFile: (path: string) => Promise<string>
+      readImage: (path: string) => Promise<string>
       writeFile: (path: string, content: string) => Promise<void>
       onFilesChanged: (cb: () => void) => void
+      copyToContext: (srcPath: string) => Promise<string>
+      saveFile: (srcPath: string) => Promise<string>
+      listFiles: () => Promise<{ name: string; filename: string }[]>
       getAppInfo: () => Promise<{ version: string; cwd: string; companyName: string }>
+      restartSession: (resumeId?: string) => Promise<void>
+      listSessions: () => Promise<{ id: string; title: string; messageCount: number; timestamp: number }[]>
+      onPtyRestarted: (cb: () => void) => void
+      getPathForFile: (file: File) => string
     }
   }
 }
@@ -61,10 +70,14 @@ export default function Terminal() {
     term.loadAddon(new WebLinksAddon())
 
     term.open(termRef.current)
-    fitAddon.fit()
 
-    // Send initial size
-    window.aios.resizePty(term.cols, term.rows)
+    // Double-RAF ensures flex layout is fully resolved before fitting
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        fitAddon.fit()
+        window.aios.resizePty(term.cols, term.rows)
+      })
+    })
 
     // Terminal input -> PTY
     term.onData((data) => {
@@ -74,6 +87,11 @@ export default function Terminal() {
     // PTY output -> terminal
     window.aios.onPtyData((data) => {
       term.write(data)
+    })
+
+    // Replay buffered output that arrived before this component mounted
+    window.aios.replayPty().then((buffered) => {
+      if (buffered) term.write(buffered)
     })
 
     // Handle resize

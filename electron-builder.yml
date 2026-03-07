@@ -1,11 +1,29 @@
 appId: com.adletic.aios-terminal
 productName: AIOS Terminal
+copyright: Copyright © 2025 Adletic
+
 directories:
+  buildResources: resources
   output: release
+
+files:
+  - out/**/*
+  - resources/**/*
+  - package.json
+
+# Rebuild native modules (node-pty) for the target platform
+npmRebuild: true
+
 mac:
-  target: dmg
+  target:
+    - target: dmg
+      arch: [x64, arm64]
   icon: resources/icon.icns
   category: public.app-category.developer-tools
+  identity: null
+  hardenedRuntime: false
+  gatekeeperAssess: false
+
 dmg:
   title: AIOS Terminal
   contents:
@@ -15,3 +33,22 @@ dmg:
       y: 220
       type: link
       path: /Applications
+
+linux:
+  target:
+    - target: AppImage
+      arch: [x64, arm64]
+  icon: resources/logo.png
+  category: Development
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: resources/icon.ico
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
