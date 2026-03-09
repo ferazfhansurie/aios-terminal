@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
-type ItemType = 'command' | 'skill' | 'session'
+type ItemType = 'command' | 'skill'
 
 interface Item {
   type: ItemType
@@ -12,19 +12,16 @@ interface Item {
 const TYPE_ICON: Record<ItemType, string> = {
   command: '/',
   skill: '◆',
-  session: '●',
 }
 
 const TYPE_COLOR: Record<ItemType, string> = {
   command: 'text-orange-500/70',
   skill: 'text-blue-400/60',
-  session: 'text-neutral-600',
 }
 
 const TYPE_BADGE: Record<ItemType, string> = {
   command: 'text-orange-500/40',
   skill: 'text-blue-500/40',
-  session: 'text-neutral-700',
 }
 
 export default function CommandPalette({ onClose }: { onClose: () => void }) {
@@ -37,10 +34,7 @@ export default function CommandPalette({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     inputRef.current?.focus()
 
-    Promise.all([
-      window.aios.getClaudeDir(),
-      window.aios.listSessions(),
-    ]).then(([claudeDir, sessions]) => {
+    window.aios.getClaudeDir().then((claudeDir) => {
       const all: Item[] = []
 
       for (const cmd of claudeDir.commands) {
@@ -61,15 +55,6 @@ export default function CommandPalette({ onClose }: { onClose: () => void }) {
         })
       }
 
-      for (const session of sessions) {
-        all.push({
-          type: 'session',
-          label: session.title,
-          sublabel: `${session.messageCount} msgs · ${formatTime(session.timestamp)}`,
-          action: () => { window.aios.restartSession(session.id); onClose() },
-        })
-      }
-
       setItems(all)
     })
   }, [])
@@ -81,12 +66,8 @@ export default function CommandPalette({ onClose }: { onClose: () => void }) {
       )
     : items
 
-  // Reset selection when filter changes
-  useEffect(() => {
-    setSelected(0)
-  }, [query])
+  useEffect(() => { setSelected(0) }, [query])
 
-  // Scroll selected item into view
   useEffect(() => {
     const el = listRef.current?.children[selected] as HTMLElement | undefined
     el?.scrollIntoView({ block: 'nearest' })
@@ -111,31 +92,27 @@ export default function CommandPalette({ onClose }: { onClose: () => void }) {
     }
   }
 
-  // Group filtered items by type for display
   const groups: { type: ItemType; label: string; items: (Item & { idx: number })[] }[] = []
-  const typeOrder: ItemType[] = ['command', 'skill', 'session']
-  let globalIdx = 0
+  const typeOrder: ItemType[] = ['command', 'skill']
   for (const type of typeOrder) {
     const group = filtered
       .map((item, i) => ({ ...item, idx: i }))
       .filter(item => item.type === type)
     if (group.length > 0) {
-      groups.push({ type, label: type === 'command' ? 'Commands' : type === 'skill' ? 'Skills' : 'Sessions', items: group })
+      groups.push({ type, label: type === 'command' ? 'Commands' : 'Skills', items: group })
     }
-    globalIdx += group.length
   }
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center pt-20"
-      style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
+      style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)' }}
       onClick={onClose}
     >
       <div
-        className="w-[500px] bg-neutral-900 border border-neutral-700/50 rounded-xl shadow-2xl overflow-hidden"
+        className="w-[500px] bg-neutral-900 border border-neutral-700/50 rounded-xl shadow-2xl overflow-hidden animate-scaleIn"
         onClick={e => e.stopPropagation()}
       >
-        {/* Input */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-neutral-800/80">
           <span className="text-neutral-600 text-[11px] font-mono shrink-0">⌘K</span>
           <input
@@ -144,7 +121,7 @@ export default function CommandPalette({ onClose }: { onClose: () => void }) {
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Search commands, skills, sessions…"
+            placeholder="Search commands and skills…"
             className="flex-1 bg-transparent text-neutral-200 text-sm placeholder:text-neutral-700 outline-none"
           />
           {query && (
@@ -157,14 +134,12 @@ export default function CommandPalette({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
-        {/* Results */}
         <div className="max-h-[360px] overflow-y-auto" ref={listRef}>
           {filtered.length === 0 ? (
             <div className="px-4 py-10 text-center text-[11px] text-neutral-700">
               No results for "{query}"
             </div>
           ) : query ? (
-            // Flat list when searching
             filtered.map((item, i) => (
               <ResultRow
                 key={i}
@@ -174,7 +149,6 @@ export default function CommandPalette({ onClose }: { onClose: () => void }) {
               />
             ))
           ) : (
-            // Grouped when not searching
             groups.map(group => (
               <div key={group.type}>
                 <div className="px-4 pt-3 pb-1 text-[9px] uppercase tracking-[0.15em] text-neutral-700 font-semibold">
@@ -193,7 +167,6 @@ export default function CommandPalette({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
-        {/* Footer hints */}
         <div className="flex items-center gap-4 px-4 py-2 border-t border-neutral-800/50 text-[9px] text-neutral-700 tracking-wide">
           <span>↑↓ navigate</span>
           <span className="text-neutral-800">·</span>
@@ -221,7 +194,7 @@ function ResultRow({
     <button
       onClick={item.action}
       onMouseEnter={onHover}
-      className={`w-full text-left px-4 py-2 flex items-center gap-3 transition-colors ${
+      className={`w-full text-left px-4 py-2 flex items-center gap-3 transition-all duration-100 ${
         isSelected ? 'bg-neutral-800' : 'hover:bg-neutral-800/40'
       }`}
     >
@@ -239,12 +212,4 @@ function ResultRow({
       )}
     </button>
   )
-}
-
-function formatTime(ms: number): string {
-  const d = new Date(ms)
-  const now = new Date()
-  const diffH = (now.getTime() - ms) / 3600000
-  if (diffH < 24) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric' })
 }

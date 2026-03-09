@@ -21,7 +21,6 @@ export interface Session {
 }
 
 function extractSessionTitle(text: string): string {
-  // Strip XML-like tags Claude wraps special messages in
   return text
     .replace(/<[^>]+>/g, ' ')
     .replace(/\s+/g, ' ')
@@ -66,8 +65,20 @@ function readSessions(sessionDir: string): Session[] {
   return sessions.sort((a, b) => b.timestamp - a.timestamp).slice(0, 30)
 }
 
+/** Derive Claude's memory dir from a cwd (same encoding Claude uses) */
+function getMemoryDir(cwd: string): string {
+  const encodedCwd = cwd.replace(/\//g, '-')
+  return path.join(process.env.HOME || '', `.claude/projects/${encodedCwd}/memory`)
+}
+
+/** Derive Claude's session dir from a cwd */
+function getSessionDir(cwd: string): string {
+  const encodedCwd = cwd.replace(/\//g, '-')
+  return path.join(process.env.HOME || '', `.claude/projects/${encodedCwd}`)
+}
+
 export function setupFileHandlers(win: BrowserWindow, cwd: string) {
-  // Remove any previously registered handlers (e.g. on hot reload)
+  // Remove any previously registered handlers
   ipcMain.removeHandler('files:claude-dir')
   ipcMain.removeHandler('files:read')
   ipcMain.removeHandler('files:write')
@@ -76,11 +87,14 @@ export function setupFileHandlers(win: BrowserWindow, cwd: string) {
   ipcMain.removeHandler('files:save-attachment')
   ipcMain.removeHandler('files:list-attachments')
   ipcMain.removeHandler('sessions:list')
+
+  // Close old watcher
+  if (watcher) { watcher.close(); watcher = null }
+
   const claudeDir = path.join(cwd, '.claude')
-  const memoryDir = path.join(
-    process.env.HOME || '',
-    '.claude/projects/-Users-firazfhansurie-Repo-firaz-adletic-aios-template/memory'
-  )
+  const memoryDir = getMemoryDir(cwd)
+  const sessionDir = getSessionDir(cwd)
+  const attachmentsDir = path.join(cwd, 'files')
 
   ipcMain.handle('files:claude-dir', async (): Promise<ClaudeDir> => {
     const result: ClaudeDir = {
@@ -91,7 +105,6 @@ export function setupFileHandlers(win: BrowserWindow, cwd: string) {
       settings: null,
     }
 
-    // Commands
     const cmdsDir = path.join(claudeDir, 'commands')
     if (fs.existsSync(cmdsDir)) {
       result.commands = fs.readdirSync(cmdsDir)
@@ -102,7 +115,6 @@ export function setupFileHandlers(win: BrowserWindow, cwd: string) {
         }))
     }
 
-    // Skills
     const skillsDir = path.join(claudeDir, 'skills')
     if (fs.existsSync(skillsDir)) {
       result.skills = fs.readdirSync(skillsDir).map(f => ({
@@ -112,7 +124,6 @@ export function setupFileHandlers(win: BrowserWindow, cwd: string) {
       }))
     }
 
-    // Context — markdown + images
     const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'])
     const ctxDir = path.join(claudeDir, 'context')
     if (fs.existsSync(ctxDir)) {
@@ -124,7 +135,6 @@ export function setupFileHandlers(win: BrowserWindow, cwd: string) {
         }))
     }
 
-    // Memory
     if (fs.existsSync(memoryDir)) {
       result.memory = fs.readdirSync(memoryDir)
         .filter(f => f.endsWith('.md'))
@@ -134,7 +144,6 @@ export function setupFileHandlers(win: BrowserWindow, cwd: string) {
         }))
     }
 
-    // Settings
     const settingsPath = path.join(claudeDir, 'settings.json')
     if (fs.existsSync(settingsPath)) {
       try {
@@ -155,7 +164,8 @@ export function setupFileHandlers(win: BrowserWindow, cwd: string) {
 
   ipcMain.handle('files:read-image', async (_event, filePath: string): Promise<string> => {
     const ext = path.extname(filePath).slice(1).toLowerCase()
-    const mime = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg'
+    const mime = ext === 'pdf' ? 'application/pdf'
+      : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg'
       : ext === 'png' ? 'image/png'
       : ext === 'gif' ? 'image/gif'
       : ext === 'webp' ? 'image/webp'
@@ -173,8 +183,6 @@ export function setupFileHandlers(win: BrowserWindow, cwd: string) {
     return dest
   })
 
-  const attachmentsDir = path.join(cwd, 'files')
-
   ipcMain.handle('files:save-attachment', async (_event, srcPath: string): Promise<string> => {
     if (!fs.existsSync(attachmentsDir)) fs.mkdirSync(attachmentsDir, { recursive: true })
     const dest = path.join(attachmentsDir, path.basename(srcPath))
@@ -189,9 +197,6 @@ export function setupFileHandlers(win: BrowserWindow, cwd: string) {
       .map(f => ({ name: f, filename: path.join(attachmentsDir, f) }))
   })
 
-  // Sessions — derive project folder from cwd (same encoding Claude uses)
-  const encodedCwd = cwd.replace(/\//g, '-')
-  const sessionDir = path.join(process.env.HOME || '', `.claude/projects/${encodedCwd}`)
   ipcMain.handle('sessions:list', async (): Promise<Session[]> => readSessions(sessionDir))
 
   // Watch for changes

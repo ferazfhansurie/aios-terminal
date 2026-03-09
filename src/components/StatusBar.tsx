@@ -11,6 +11,10 @@ export default function StatusBar() {
 
   useEffect(() => {
     window.aios.getAppInfo().then(setInfo)
+    const remove = window.aios.onInstanceSwitched(() => {
+      window.aios.getAppInfo().then(setInfo)
+    })
+    return () => { remove() }
   }, [])
 
   return (
@@ -32,7 +36,7 @@ export default function StatusBar() {
         <span className="text-green-700">Connected</span>
       </span>
       <div className="flex-1" />
-      <span className="text-neutral-800 font-mono">v{info?.version || '0.1.0'}</span>
+      <span className="text-neutral-800 font-mono">v{info?.version || '0.2.0'}</span>
     </div>
   )
 }

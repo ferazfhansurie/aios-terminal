@@ -1,0 +1,1591 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0a0a0a">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23f97316'/><text x='50%25' y='50%25' text-anchor='middle' dy='.35em' font-family='system-ui' font-size='18' font-weight='bold' fill='white'>A</text></svg>">
+  <link rel="apple-touch-icon" href="logo.png">
+  <link rel="manifest" href="data:application/json,%7B%22name%22%3A%22AIOS%20Terminal%22%2C%22short_name%22%3A%22AIOS%22%2C%22start_url%22%3A%22%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230a0a0a%22%2C%22theme_color%22%3A%22%230a0a0a%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22logo.png%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fpng%22%7D%5D%7D">
+  <title>AIOS Terminal</title>
+
+  <!-- Pinned CDN versions -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.11.1/styles/github-dark-dimmed.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.11.1/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js"></script>
+
+  <script>
+    tailwind.config = { theme: { extend: { colors: {
+      surface: { 950:'#0a0a0a', 900:'#111111', 800:'#1a1a1a', 700:'#262626', 600:'#333333', 500:'#404040' }
+    }}}}
+  </script>
+
+  <style>
+    /* ── Base ── */
+    * { margin:0; padding:0; box-sizing:border-box; scrollbar-width:thin; scrollbar-color:#2a2a2a transparent; -webkit-tap-highlight-color:transparent; }
+    html,body { height:100%; }
+    body { font-family: -apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif; overflow:hidden; -webkit-font-smoothing:antialiased; }
+    ::selection { background:#f9731630; color:inherit; }
+    ::-webkit-scrollbar { width:4px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:#2a2a2a; border-radius:2px; }
+    ::-webkit-scrollbar-thumb:hover { background:#3a3a3a; }
+    button { transition: color 120ms, background-color 120ms, border-color 120ms, opacity 120ms; }
+    body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); }
+
+    /* ── Terminal-style text ── */
+    .term-font { font-family:'JetBrains Mono','Fira Code','SF Mono',Menlo,monospace; }
+
+    /* ── AI text ── */
+    .ai-text { line-height:1.65; color:#e5e5e5; }
+    .ai-text p { margin:0 0 8px; }
+    .ai-text p:last-child { margin-bottom:0; }
+    .ai-text strong { color:#fff; font-weight:600; }
+    .ai-text em { color:#d4d4d4; }
+    .ai-text a { color:#f97316; text-decoration:underline; text-underline-offset:2px; }
+    .ai-text h1 { font-size:1.15em; font-weight:700; color:#fff; margin:16px 0 6px; padding-bottom:4px; border-bottom:1px solid #262626; }
+    .ai-text h2 { font-size:1.05em; font-weight:600; color:#fff; margin:12px 0 4px; }
+    .ai-text h3 { font-size:1em; font-weight:600; color:#f5f5f5; margin:10px 0 4px; }
+    .ai-text h1:first-child,.ai-text h2:first-child,.ai-text h3:first-child { margin-top:0; }
+    .ai-text ul { list-style:disc; margin:4px 0 8px 18px; }
+    .ai-text ol { list-style:decimal; margin:4px 0 8px 18px; }
+    .ai-text li { margin:2px 0; }
+    .ai-text li>p { margin:0; }
+    .ai-text code:not(pre code) { background:#1a1a1a; color:#f97316; padding:1px 5px; border-radius:3px; font-family:'JetBrains Mono','Fira Code','SF Mono',Menlo,monospace; font-size:0.85em; border:1px solid #262626; }
+    .ai-text pre { position:relative; margin:8px 0; border-radius:6px; overflow:hidden; background:#0d1117!important; border:1px solid #1e1e2e; }
+    .ai-text pre code { display:block; padding:12px 14px; font-size:12px; line-height:1.55; overflow-x:auto; font-family:'JetBrains Mono','Fira Code','SF Mono',Menlo,monospace; }
+    .ai-text .code-lang { position:absolute; top:0; left:0; font-size:9px; color:#525252; padding:2px 8px; background:#161b22; border-bottom-right-radius:4px; text-transform:uppercase; letter-spacing:0.5px; }
+    .ai-text .copy-btn { position:absolute; top:3px; right:3px; font-size:10px; padding:2px 7px; background:#21262d; border:1px solid #30363d; border-radius:3px; color:#525252; cursor:pointer; transition:all 120ms; }
+    .ai-text .copy-btn:hover { background:#30363d; color:#e6edf3; }
+    .ai-text .copy-btn.copied { color:#22c55e; border-color:#22c55e60; }
+    .ai-text table { border-collapse:collapse; margin:8px 0; width:100%; font-size:12px; }
+    .ai-text th { background:#161b22; font-weight:600; color:#e5e5e5; text-align:left; padding:6px 10px; border:1px solid #262626; }
+    .ai-text td { padding:5px 10px; border:1px solid #262626; }
+    .ai-text blockquote { border-left:2px solid #f97316; padding:3px 12px; margin:8px 0; color:#737373; }
+    .ai-text hr { border:none; border-top:1px solid #262626; margin:12px 0; }
+
+    /* ── Tool cards ── */
+    .tool-card { transition:all 150ms; }
+    .tool-card.running { border-color:rgba(249,115,22,0.3); }
+    .tool-card.done { border-color:#1a1a1a; }
+    .tool-card.error { border-color:rgba(239,68,68,0.25); }
+
+    /* ── Animations ── */
+    @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .dot-pulse { animation:pulse-dot 1.5s infinite; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    .spin { animation:spin 0.8s linear infinite; }
+    @keyframes bounce-dot { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-5px)} }
+    .thinking-dot { animation:bounce-dot 1.4s infinite ease-in-out; }
+    @keyframes fade-in { from{opacity:0;transform:translateY(3px)} to{opacity:1;transform:translateY(0)} }
+    .fade-in { animation:fade-in 0.15s ease-out; }
+    @keyframes slide-up { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+    .slide-up { animation:slide-up 0.2s ease-out; }
+    @keyframes slide-down { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+    .slide-down { animation:slide-down 0.15s ease-out; }
+    @keyframes toast-in { from{opacity:0;transform:translateX(100%)} to{opacity:1;transform:translateX(0)} }
+    @keyframes toast-out { from{opacity:1;transform:translateX(0)} to{opacity:0;transform:translateX(100%)} }
+    .toast-in { animation:toast-in 0.25s ease-out; }
+    .toast-out { animation:toast-out 0.2s ease-in forwards; }
+
+    /* ── Input ── */
+    textarea:focus { outline:none; border-color:#f97316!important; }
+
+    /* ── Mobile sidebar ── */
+    .sidebar-overlay { transition:opacity 200ms; }
+    .sidebar-drawer { transition:transform 200ms ease-out; }
+
+    /* ── Tab active indicator ── */
+    .tab-active { border-bottom:2px solid rgba(249,115,22,0.6); }
+
+    /* ── Thinking block ── */
+    .thinking-block { border-left:2px solid #a855f740; background:#a855f708; padding:6px 12px; margin:6px 0; border-radius:0 4px 4px 0; }
+    .thinking-block summary { cursor:pointer; color:#a855f7; font-size:11px; user-select:none; }
+    .thinking-block summary:hover { color:#c084fc; }
+    .thinking-block .thinking-content { color:#737373; font-size:12px; margin-top:4px; line-height:1.5; max-height:200px; overflow-y:auto; }
+
+    /* ── Command palette ── */
+    .palette-backdrop { background:rgba(0,0,0,0.55); backdrop-filter:blur(8px); }
+    .palette-item.selected { background:#262626; }
+
+    /* ── Toast ── */
+    #toast-container { pointer-events:none; }
+    #toast-container > div { pointer-events:auto; }
+
+    /* ── Mobile ── */
+    @supports (-webkit-touch-callout:none) { .input-area { padding-bottom:max(6px,env(safe-area-inset-bottom)); } }
+    @media (max-width:768px) {
+      .ai-text { font-size:13px; }
+      .ai-text pre code { font-size:11px; padding:10px; }
+    }
+  </style>
+  <noscript><style>body{background:#0a0a0a;color:#e5e5e5;display:flex;align-items:center;justify-content:center;height:100vh;}</style></noscript>
+</head>
+<body class="h-full bg-[#0a0a0a] text-neutral-100 overflow-hidden">
+  <noscript><div>AIOS requires JavaScript.</div></noscript>
+
+  <div id="app" class="flex h-full" style="height:100dvh;">
+
+    <!-- ═══ SIDEBAR ═══ -->
+    <aside id="sidebar" class="hidden md:flex w-52 border-r border-neutral-800/40 bg-[#0a0a0a] flex-col shrink-0 z-30">
+      <!-- Logo — compact horizontal -->
+      <div class="px-3 pt-7 pb-2.5 border-b border-neutral-800/50 flex items-center gap-2.5">
+        <div class="relative group cursor-default shrink-0">
+          <div class="absolute inset-0 rounded-xl bg-orange-500/10 blur-lg group-hover:bg-orange-500/20 transition-all duration-500"></div>
+          <img src="logo.png" alt="AIOS" class="relative w-8 h-8 rounded-lg shadow-lg shadow-black/30" onerror="this.style.display='none'">
+        </div>
+        <div class="min-w-0">
+          <h1 class="text-[11px] font-bold tracking-[0.2em] text-orange-400 uppercase leading-tight">AIOS</h1>
+          <p class="text-[8px] text-neutral-700 tracking-[0.15em] uppercase">Terminal</p>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="px-3 py-2 border-b border-neutral-800/40">
+        <div class="text-[9px] font-semibold uppercase tracking-[0.15em] text-neutral-700 mb-2 px-1">Quick Actions</div>
+        <div class="grid grid-cols-2 gap-1" id="quick-actions-desktop"></div>
+      </div>
+
+      <!-- Sidebar sections -->
+      <div class="flex-1 overflow-y-auto">
+        <!-- Sessions -->
+        <div class="border-b border-neutral-800/30">
+          <button onclick="toggleSection('sessions')" class="w-full flex items-center justify-between px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.15em] text-neutral-600 hover:text-neutral-400 transition-colors">
+            <span>Sessions</span>
+            <span id="sessions-chevron" class="text-neutral-700 text-[10px]">▸</span>
+          </button>
+          <div id="sessions-content" style="display:none" class="px-2 pb-2">
+            <button onclick="createNewTab()" class="w-full text-left px-3 py-1.5 rounded-md text-xs text-orange-500/60 hover:bg-orange-500/[0.06] hover:text-orange-400 border border-transparent hover:border-orange-500/15 transition-all flex items-center gap-2 group">
+              <span class="text-orange-500/50 group-hover:text-orange-400 text-sm leading-none">+</span>
+              <span class="text-[11px]">New session</span>
+            </button>
+            <div id="session-list" class="space-y-0.5 mt-0.5"></div>
+          </div>
+        </div>
+
+        <!-- History -->
+        <div class="border-b border-neutral-800/30">
+          <button onclick="toggleSection('history')" class="w-full flex items-center justify-between px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.15em] text-neutral-600 hover:text-neutral-400 transition-colors">
+            <span>History</span>
+            <span id="history-chevron" class="text-neutral-700 text-[10px]">▸</span>
+          </button>
+          <div id="history-content" style="display:none" class="px-2 pb-2">
+            <div id="history-list" class="space-y-0.5 max-h-48 overflow-y-auto">
+              <div class="text-[10px] text-neutral-700 px-3 py-1">Loading…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Commands -->
+        <div class="border-b border-neutral-800/30">
+          <button onclick="toggleSection('commands')" class="w-full flex items-center justify-between px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.15em] text-neutral-600 hover:text-neutral-400 transition-colors">
+            <span>Commands</span>
+            <span id="commands-chevron" class="text-neutral-700 text-[10px]">▸</span>
+          </button>
+          <div id="commands-content" style="display:none" class="px-2 pb-2">
+            <div id="commands-list" class="space-y-0.5">
+              <div class="text-[10px] text-neutral-700 px-3 py-1">Loading…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Schedule -->
+        <div class="border-b border-neutral-800/30">
+          <button onclick="toggleSection('schedule')" class="w-full flex items-center justify-between px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.15em] text-neutral-600 hover:text-neutral-400 transition-colors">
+            <span>Schedule</span>
+            <span id="schedule-chevron" class="text-neutral-700 text-[10px]">▸</span>
+          </button>
+          <div id="schedule-content" style="display:none" class="px-2 pb-2">
+            <div id="schedule-list" class="space-y-0.5"></div>
+          </div>
+        </div>
+
+        <!-- Files -->
+        <div class="border-b border-neutral-800/30">
+          <button onclick="toggleSection('files')" class="w-full flex items-center justify-between px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.15em] text-neutral-600 hover:text-neutral-400 transition-colors">
+            <span>Files</span>
+            <span id="files-chevron" class="text-neutral-700 text-[10px]">▸</span>
+          </button>
+          <div id="files-content" style="display:none" class="px-2 pb-2">
+            <div id="files-breadcrumb" class="px-2 mb-1"></div>
+            <div id="files-list" class="space-y-0 max-h-64 overflow-y-auto">
+              <div class="text-[10px] text-neutral-700 px-3 py-1">Loading…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Connection -->
+        <div class="border-b border-neutral-800/30">
+          <button onclick="toggleSection('connection')" class="w-full flex items-center justify-between px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.15em] text-neutral-600 hover:text-neutral-400 transition-colors">
+            <span>Connection</span>
+            <span id="connection-chevron" class="text-neutral-700 text-[10px]">▸</span>
+          </button>
+          <div id="connection-content" style="display:none" class="px-3 pb-3 space-y-2">
+            <div class="flex items-center gap-2">
+              <span id="sb-status-dot" class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+              <span id="sb-status-text" class="text-[11px] text-neutral-500">Offline</span>
+            </div>
+            <div class="text-[10px] text-neutral-700 term-font truncate" id="sb-cwd" title=""></div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Mobile sidebar overlay -->
+    <div id="sidebar-overlay" class="sidebar-overlay hidden fixed inset-0 bg-black/60 z-20 md:hidden" onclick="closeSidebar()"></div>
+    <aside id="sidebar-mobile" class="sidebar-drawer fixed top-0 left-0 bottom-0 w-64 bg-[#0a0a0a] border-r border-neutral-800/40 z-30 md:hidden flex flex-col" style="transform:translateX(-100%)">
+      <!-- Logo (mobile) -->
+      <div class="px-3 pt-5 pb-2.5 border-b border-neutral-800/50 flex items-center gap-2.5">
+        <div class="relative shrink-0">
+          <div class="absolute inset-0 rounded-xl bg-orange-500/10 blur-lg"></div>
+          <img src="logo.png" alt="AIOS" class="relative w-8 h-8 rounded-lg" onerror="this.style.display='none'">
+        </div>
+        <div class="min-w-0">
+          <h1 class="text-[11px] font-bold tracking-[0.2em] text-orange-400 uppercase leading-tight">AIOS</h1>
+          <p class="text-[8px] text-neutral-700 tracking-[0.15em] uppercase">Terminal</p>
+        </div>
+      </div>
+
+      <!-- Quick Actions (mobile) -->
+      <div class="px-3 py-2 border-b border-neutral-800/40">
+        <div class="text-[9px] font-semibold uppercase tracking-[0.15em] text-neutral-700 mb-2 px-1">Quick Actions</div>
+        <div class="grid grid-cols-2 gap-1" id="quick-actions-mobile"></div>
+      </div>
+
+      <!-- Mobile sidebar sections -->
+      <div class="flex-1 overflow-y-auto">
+        <div class="border-b border-neutral-800/30 px-2 py-2">
+          <button onclick="createNewTab();closeSidebar()" class="w-full text-left px-3 py-1.5 rounded-md text-xs text-orange-500/60 hover:bg-orange-500/[0.06] hover:text-orange-400 transition-all flex items-center gap-2 group">
+            <span class="text-orange-500/50 group-hover:text-orange-400 text-sm leading-none">+</span>
+            <span class="text-[11px]">New session</span>
+          </button>
+        </div>
+
+        <!-- Commands (mobile) -->
+        <div class="border-b border-neutral-800/30">
+          <button onclick="toggleSection('m-commands')" class="w-full flex items-center justify-between px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.15em] text-neutral-600 hover:text-neutral-400 transition-colors">
+            <span>Commands</span>
+            <span id="m-commands-chevron" class="text-neutral-700 text-[10px]">▸</span>
+          </button>
+          <div id="m-commands-content" style="display:none" class="px-2 pb-2">
+            <div id="m-commands-list" class="space-y-0.5">
+              <div class="text-[10px] text-neutral-700 px-3 py-1">Loading…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Files (mobile) -->
+        <div class="border-b border-neutral-800/30">
+          <button onclick="toggleSection('m-files')" class="w-full flex items-center justify-between px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.15em] text-neutral-600 hover:text-neutral-400 transition-colors">
+            <span>Files</span>
+            <span id="m-files-chevron" class="text-neutral-700 text-[10px]">▸</span>
+          </button>
+          <div id="m-files-content" style="display:none" class="px-2 pb-2">
+            <div id="m-files-breadcrumb" class="px-2 mb-1"></div>
+            <div id="m-files-list" class="space-y-0 max-h-64 overflow-y-auto">
+              <div class="text-[10px] text-neutral-700 px-3 py-1">Loading…</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="px-3 py-3">
+          <div class="flex items-center gap-2 mb-2">
+            <span id="sb-m-status-dot" class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+            <span id="sb-m-status-text" class="text-[11px] text-neutral-500">Offline</span>
+          </div>
+          <div class="text-[10px] text-neutral-700 term-font truncate" id="sb-m-cwd"></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ═══ MAIN AREA ═══ -->
+    <div class="flex-1 flex flex-col min-w-0">
+
+      <!-- Tab bar -->
+      <div id="tab-bar" class="h-8 border-b border-neutral-800/40 flex items-center shrink-0 bg-[#0a0a0a]">
+        <!-- Mobile hamburger -->
+        <button id="btn-menu" class="md:hidden shrink-0 w-8 h-8 flex items-center justify-center text-neutral-600 hover:text-neutral-400 transition-colors" onclick="openSidebar()" aria-label="Open menu">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <div id="tab-container" class="flex items-center min-w-0 overflow-x-auto"></div>
+        <button onclick="createNewTab()" class="shrink-0 w-7 h-8 flex items-center justify-center text-neutral-700 hover:text-orange-400 hover:bg-neutral-800/60 transition-colors text-sm" title="New session">+</button>
+        <div class="flex-1"></div>
+        <!-- Status (mobile only) -->
+        <div class="flex items-center gap-1.5 md:hidden px-2">
+          <div id="hdr-status-dot" class="w-1.5 h-1.5 rounded-full bg-red-500"></div>
+          <span id="hdr-status-text" class="text-[10px] text-neutral-500">Offline</span>
+        </div>
+      </div>
+
+      <!-- Reconnection banner -->
+      <div id="reconnect-bar" class="hidden bg-red-900/80 text-white text-center text-[10px] py-1 shrink-0">
+        Connection lost — reconnecting…
+      </div>
+
+      <!-- ═══ MESSAGES ═══ -->
+      <main id="messages" class="flex-1 overflow-y-auto px-4 py-3 overscroll-contain" role="log">
+        <div id="welcome-msg" class="flex flex-col items-center justify-center text-center pt-16 sm:pt-24 pb-10">
+          <div class="relative mb-4">
+            <div class="absolute inset-0 rounded-2xl bg-orange-500/10 blur-xl"></div>
+            <img src="logo.png" alt="AIOS" class="relative w-16 h-16 rounded-xl" onerror="this.parentElement.innerHTML='<div class=\'w-16 h-16 rounded-xl bg-orange-500 flex items-center justify-center\'><span class=\'text-white font-bold text-2xl\'>A</span></div>'">
+          </div>
+          <div class="text-[10px] font-bold tracking-[0.2em] text-orange-400 uppercase mb-1">AIOS Terminal</div>
+          <div class="text-[10px] text-neutral-600 tracking-widest uppercase">Remote Control</div>
+          <div id="cwd-welcome" class="text-neutral-700 text-[10px] mt-4 term-font truncate max-w-full px-8"></div>
+        </div>
+      </main>
+
+      <!-- ═══ INPUT ═══ -->
+      <div class="input-area border-t border-neutral-800/40 px-4 py-2.5 shrink-0">
+        <div class="flex gap-2 items-end">
+          <span class="text-orange-500/50 text-sm font-bold term-font pb-2 shrink-0 select-none">&gt;</span>
+          <label for="prompt-input" class="sr-only">Command</label>
+          <textarea
+            id="prompt-input"
+            class="flex-1 bg-transparent border-0 text-neutral-100 resize-none placeholder-neutral-700 text-sm leading-relaxed term-font py-1.5"
+            placeholder="Type a command..."
+            rows="1"
+            autocomplete="off" autocorrect="off" spellcheck="false"
+            style="outline:none;"
+          ></textarea>
+          <button id="btn-send" class="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-600 hover:text-orange-400 transition-colors shrink-0 disabled:opacity-20 disabled:cursor-not-allowed" aria-label="Send">
+            <span class="hidden sm:inline">Enter</span>
+            <svg class="w-4 h-4 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+          <button id="btn-stop" class="hidden px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-red-500/70 hover:text-red-400 transition-colors shrink-0" aria-label="Stop">
+            <span class="hidden sm:inline">Stop</span>
+            <svg class="w-4 h-4 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1" stroke-width="2"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- ═══ STATUS BAR ═══ -->
+      <div class="h-6 border-t border-neutral-800/50 bg-[#0a0a0a]/90 flex items-center px-4 gap-2.5 text-[10px] text-neutral-600 shrink-0">
+        <span class="text-orange-500/70 font-bold tracking-[0.2em] uppercase text-[9px]">AIOS</span>
+        <span class="w-px h-3 bg-neutral-800 shrink-0"></span>
+        <span id="bar-company" class="text-neutral-500 font-medium">Adletic (0210)</span>
+        <span class="w-px h-3 bg-neutral-800 shrink-0"></span>
+        <span id="bar-cwd" class="text-neutral-700 term-font text-[9px] truncate max-w-[200px]" title=""></span>
+        <span class="w-px h-3 bg-neutral-800 shrink-0"></span>
+        <span class="flex items-center gap-1.5">
+          <span id="bar-dot" class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+          <span id="bar-status" class="text-neutral-700">Offline</span>
+        </span>
+        <div class="flex-1"></div>
+        <span id="bar-cost" class="text-neutral-800 term-font hidden"></span>
+        <button onclick="showShortcutsHelp()" class="text-neutral-800 hover:text-neutral-500 transition-colors term-font hidden md:inline" title="Keyboard shortcuts">⌘?</button>
+        <button onclick="exportConversation()" class="text-neutral-800 hover:text-neutral-500 transition-colors term-font ml-1" title="Export conversation">↓</button>
+        <span class="text-neutral-800 term-font ml-1">v0.3.0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TOAST CONTAINER ═══ -->
+  <div id="toast-container" class="fixed bottom-10 right-4 z-[60] flex flex-col gap-2 max-w-sm"></div>
+
+  <!-- ═══ COMMAND PALETTE ═══ -->
+  <div id="command-palette" class="hidden fixed inset-0 z-50 flex items-start justify-center pt-20 palette-backdrop" onclick="closePalette()">
+    <div class="w-[500px] max-w-[90vw] bg-neutral-900 border border-neutral-700/50 rounded-xl shadow-2xl overflow-hidden slide-down" onclick="event.stopPropagation()">
+      <div class="flex items-center gap-3 px-4 py-3 border-b border-neutral-800/80">
+        <span class="text-neutral-600 text-[11px] term-font shrink-0">⌘K</span>
+        <input id="palette-input" type="text" placeholder="Search commands, sessions, actions…" class="flex-1 bg-transparent text-neutral-200 text-sm placeholder:text-neutral-700 outline-none" autocomplete="off" spellcheck="false">
+        <button onclick="closePalette()" class="text-neutral-700 hover:text-neutral-400 text-xs transition-colors">✕</button>
+      </div>
+      <div id="palette-results" class="max-h-[360px] overflow-y-auto"></div>
+      <div class="flex items-center gap-4 px-4 py-2 border-t border-neutral-800/50 text-[9px] text-neutral-700 tracking-wide">
+        <span>↑↓ navigate</span><span class="text-neutral-800">·</span>
+        <span>↵ run</span><span class="text-neutral-800">·</span>
+        <span>esc close</span><div class="flex-1"></div>
+        <span id="palette-count"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ KEYBOARD SHORTCUTS HELP ═══ -->
+  <div id="shortcuts-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center" style="background:rgba(0,0,0,0.6);backdrop-filter:blur(8px)" onclick="closeShortcutsHelp()">
+    <div class="w-96 max-w-[90vw] bg-neutral-900 border border-neutral-700/50 rounded-xl shadow-2xl p-5 slide-down" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-sm font-semibold text-neutral-200">Keyboard Shortcuts</h2>
+        <button onclick="closeShortcutsHelp()" class="text-neutral-600 hover:text-neutral-300 transition-colors text-lg">✕</button>
+      </div>
+      <div class="space-y-1 text-[12px]">
+        <div class="flex justify-between py-1.5 border-b border-neutral-800/30"><span class="text-neutral-400">Command palette</span><kbd class="text-neutral-600 term-font text-[11px]">⌘K</kbd></div>
+        <div class="flex justify-between py-1.5 border-b border-neutral-800/30"><span class="text-neutral-400">New session</span><kbd class="text-neutral-600 term-font text-[11px]">⌘T</kbd></div>
+        <div class="flex justify-between py-1.5 border-b border-neutral-800/30"><span class="text-neutral-400">Close session</span><kbd class="text-neutral-600 term-font text-[11px]">⌘W</kbd></div>
+        <div class="flex justify-between py-1.5 border-b border-neutral-800/30"><span class="text-neutral-400">Send message</span><kbd class="text-neutral-600 term-font text-[11px]">Enter</kbd></div>
+        <div class="flex justify-between py-1.5 border-b border-neutral-800/30"><span class="text-neutral-400">Newline</span><kbd class="text-neutral-600 term-font text-[11px]">Shift+Enter</kbd></div>
+        <div class="flex justify-between py-1.5 border-b border-neutral-800/30"><span class="text-neutral-400">Stop generation</span><kbd class="text-neutral-600 term-font text-[11px]">Escape</kbd></div>
+        <div class="flex justify-between py-1.5 border-b border-neutral-800/30"><span class="text-neutral-400">Export conversation</span><kbd class="text-neutral-600 term-font text-[11px]">⌘E</kbd></div>
+        <div class="flex justify-between py-1.5"><span class="text-neutral-400">Shortcuts help</span><kbd class="text-neutral-600 term-font text-[11px]">⌘?</kbd></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ═══ STATE ═══
+    const S = {
+      ws: null, isProcessing: false, totalCost: 0,
+      textEl: null, textBuf: '', toolEls: {}, toolInputs: {},
+      thinkingEl: null, renderQueued: false, renderTimer: null,
+      thinkingBlockEl: null, thinkingBlockBuf: '',
+      pendingMessages: [], // Queue for messages while disconnected
+    };
+
+    // ═══ TABS ═══
+    let tabs = [];
+    let activeTabId = null;
+    let tabCounter = 0;
+
+    function createTab(label) {
+      const id = 'tab-' + (++tabCounter) + '-' + Date.now().toString(36);
+      const tab = { id, label: label || 'Session ' + tabCounter, sessionId: null, cost: 0, html: '' };
+      tabs.push(tab);
+      return tab;
+    }
+
+    function getActiveTab() { return tabs.find(t => t.id === activeTabId); }
+
+    function createNewTab(label) {
+      // Save current tab state
+      saveCurrentTab();
+      const tab = createTab(label);
+      activeTabId = tab.id;
+      // Reset state
+      S.textEl = null; S.textBuf = ''; S.toolEls = {}; S.toolInputs = {};
+      S.thinkingEl = null; S.thinkingBlockEl = null; S.thinkingBlockBuf = '';
+      S.totalCost = 0;
+      $('#bar-cost').classList.add('hidden');
+      messagesEl.innerHTML = '';
+      showWelcome();
+      renderTabs();
+      if (S.isProcessing) { abortQuery(); }
+      inputEl.focus();
+    }
+
+    function switchToTab(tabId) {
+      if (tabId === activeTabId) return;
+      saveCurrentTab();
+      activeTabId = tabId;
+      const tab = getActiveTab();
+      if (!tab) return;
+      messagesEl.innerHTML = tab.html || '';
+      S.textEl = null; S.textBuf = ''; S.toolEls = {}; S.toolInputs = {}; S.thinkingEl = null;
+      S.totalCost = tab.cost;
+      if (tab.cost > 0) { $('#bar-cost').textContent = '$' + tab.cost.toFixed(4); $('#bar-cost').classList.remove('hidden'); }
+      else { $('#bar-cost').classList.add('hidden'); }
+      if (S.isProcessing) { abortQuery(); }
+      renderTabs();
+      scrollBottom();
+    }
+
+    function closeTab(tabId) {
+      if (tabs.length <= 1) return;
+      const idx = tabs.findIndex(t => t.id === tabId);
+      if (idx === -1) return;
+      tabs.splice(idx, 1);
+      if (tabId === activeTabId) {
+        const newIdx = Math.min(idx, tabs.length - 1);
+        activeTabId = tabs[newIdx].id;
+        const tab = getActiveTab();
+        messagesEl.innerHTML = tab.html || '';
+        S.textEl = null; S.textBuf = ''; S.toolEls = {}; S.toolInputs = {};
+        S.thinkingEl = null; S.totalCost = tab.cost;
+      }
+      renderTabs();
+    }
+
+    function saveCurrentTab() {
+      const tab = getActiveTab();
+      if (tab) {
+        tab.html = messagesEl.innerHTML;
+        tab.cost = S.totalCost;
+      }
+    }
+
+    function renderTabs() {
+      const container = document.getElementById('tab-container');
+      container.innerHTML = tabs.map(tab => {
+        const isActive = tab.id === activeTabId;
+        return `<button onclick="switchToTab('${tab.id}')" class="flex items-center gap-1.5 px-3 h-8 text-[11px] shrink-0 border-r border-neutral-800/30 transition-all group relative ${isActive ? 'bg-neutral-900/80 text-neutral-300' : 'text-neutral-600 hover:text-neutral-400 hover:bg-neutral-900/40'}">
+          ${isActive ? '<div class="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500/60"></div>' : ''}
+          <span class="w-1.5 h-1.5 rounded-full shrink-0 ${isActive ? 'bg-green-500/70' : 'bg-neutral-700'}"></span>
+          <span class="truncate max-w-[100px]">${esc(tab.label)}</span>
+          ${tabs.length > 1 ? `<span onclick="event.stopPropagation();closeTab('${tab.id}')" class="ml-0.5 text-[9px] text-neutral-700 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all shrink-0 w-4 h-4 flex items-center justify-center rounded hover:bg-neutral-800">✕</span>` : ''}
+        </button>`;
+      }).join('');
+    }
+
+    // ═══ DOM ═══
+    const $ = s => document.querySelector(s);
+    const messagesEl = $('#messages');
+    const inputEl = $('#prompt-input');
+    const btnSend = $('#btn-send');
+    const btnStop = $('#btn-stop');
+    const reconnectBar = $('#reconnect-bar');
+    const originalTitle = document.title;
+
+    // ═══ AUTH ═══
+    const TOKEN = (() => {
+      const t = new URLSearchParams(location.search).get('token') || sessionStorage.getItem('aios_token') || '';
+      if (t) {
+        sessionStorage.setItem('aios_token', t);
+        const clean = new URL(location.href);
+        clean.searchParams.delete('token');
+        history.replaceState(null, '', clean.pathname + (clean.search || ''));
+      }
+      return t;
+    })();
+
+    // ═══ QUICK ACTIONS ═══
+    const QUICK_ACTIONS = [
+      { label: 'Morning Brief', cmd: 'Give me a morning briefing — what happened overnight, key metrics, anything I need to act on today. Check for any leads, messages, or revenue changes.', icon: '◉' },
+      { label: 'Lead Audit', cmd: 'Run a lead leak audit — find contacts who messaged us in the last 48h but never got a reply. Show me the worst ones first.', icon: '◎' },
+      { label: 'Revenue Check', cmd: "What's our current revenue situation? Show MRR, active clients, upcoming renewals, and flag any churn risks.", icon: '◈' },
+      { label: 'Draft Proposal', cmd: "Help me draft a proposal for a prospect. Ask me who it's for and I'll give you the details.", icon: '◇' },
+      { label: 'Pipeline Review', cmd: 'Show me the full sales pipeline — active deals, follow-ups due, and suggest next actions for each.', icon: '▣' },
+      { label: 'Weekly Report', cmd: 'Generate a weekly report covering: revenue, new clients, churn, active deals, and key wins. Make it presentable.', icon: '▤' },
+    ];
+
+    function renderQuickActions(containerId) {
+      const el = document.getElementById(containerId);
+      el.innerHTML = QUICK_ACTIONS.map(a =>
+        `<button onclick="quickAction(${esc(JSON.stringify(a.cmd))})" class="text-left px-2 py-1.5 rounded-md text-[10px] text-neutral-600 hover:text-neutral-300 hover:bg-neutral-800/60 transition-all flex items-center gap-1.5 group">
+          <span class="text-orange-500/30 group-hover:text-orange-500/60 text-[9px] shrink-0">${a.icon}</span>
+          <span class="truncate">${esc(a.label)}</span>
+        </button>`
+      ).join('');
+    }
+
+    function quickAction(prompt) {
+      closeSidebar();
+      inputEl.value = prompt;
+      sendQuery();
+    }
+
+    // ═══ MARKDOWN ═══
+    marked.setOptions({ breaks: true, gfm: true });
+
+    function renderMd(text) {
+      try { return DOMPurify.sanitize(marked.parse(text), { ADD_ATTR: ['target'] }); }
+      catch { return esc(text); }
+    }
+    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    function postProcessCode(container) {
+      container.querySelectorAll('pre code').forEach(b => {
+        if (b.dataset.hl) return; b.dataset.hl = '1';
+        try { hljs.highlightElement(b); } catch {}
+      });
+      container.querySelectorAll('pre').forEach(pre => {
+        if (pre.dataset.done) return; pre.dataset.done = '1';
+        const code = pre.querySelector('code');
+        const lang = code?.className?.match(/language-(\w+)/)?.[1];
+        if (lang) { const l = document.createElement('span'); l.className = 'code-lang'; l.textContent = lang; pre.appendChild(l); }
+        const btn = document.createElement('button'); btn.className = 'copy-btn'; btn.textContent = 'Copy';
+        btn.onclick = e => { e.stopPropagation(); navigator.clipboard.writeText(code?.textContent || pre.textContent); btn.textContent='Copied'; btn.classList.add('copied'); setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},1500); };
+        pre.appendChild(btn);
+      });
+    }
+
+    // ═══ SCROLL ═══
+    let userScrolled = false;
+    messagesEl.addEventListener('scroll', () => {
+      const {scrollTop,scrollHeight,clientHeight} = messagesEl;
+      userScrolled = scrollHeight - scrollTop - clientHeight > 80;
+    });
+    function scrollBottom() { if (userScrolled) return; requestAnimationFrame(() => { messagesEl.scrollTop = messagesEl.scrollHeight; }); }
+
+    // ═══ SIDEBAR ═══
+    const sectionState = { sessions: false, history: false, commands: false, files: false, connection: false, schedule: false, 'm-commands': false, 'm-files': false };
+    function toggleSection(id) {
+      sectionState[id] = !sectionState[id];
+      const content = document.getElementById(id + '-content');
+      const chevron = document.getElementById(id + '-chevron');
+      if (content) content.style.display = sectionState[id] ? '' : 'none';
+      if (chevron) chevron.textContent = sectionState[id] ? '▾' : '▸';
+    }
+    function openSidebar() {
+      $('#sidebar-overlay').classList.remove('hidden');
+      $('#sidebar-mobile').style.transform = 'translateX(0)';
+    }
+    function closeSidebar() {
+      $('#sidebar-overlay').classList.add('hidden');
+      $('#sidebar-mobile').style.transform = 'translateX(-100%)';
+    }
+
+    // ═══ STATUS ═══
+    function setAllStatus(text, color) {
+      const cls = { red:'bg-red-500', green:'bg-green-500', yellow:'bg-yellow-500' };
+      const dotCls = `w-1.5 h-1.5 rounded-full ${cls[color]||cls.red}`;
+      const textCls = color === 'green' ? 'text-green-700' : color === 'yellow' ? 'text-yellow-600' : 'text-neutral-700';
+
+      $('#bar-dot').className = dotCls;
+      $('#bar-status').textContent = text;
+      $('#bar-status').className = textCls;
+      if (color === 'green') $('#bar-dot').style.boxShadow = '0 0 5px #22c55e80';
+      else $('#bar-dot').style.boxShadow = '';
+
+      $('#hdr-status-dot').className = dotCls;
+      $('#hdr-status-text').textContent = text;
+
+      $('#sb-status-dot').className = dotCls;
+      $('#sb-status-text').textContent = text;
+      $('#sb-m-status-dot').className = dotCls;
+      $('#sb-m-status-text').textContent = text;
+
+      if (color === 'yellow') { $('#bar-dot').classList.add('dot-pulse'); $('#hdr-status-dot').classList.add('dot-pulse'); }
+      else { $('#bar-dot').classList.remove('dot-pulse'); $('#hdr-status-dot').classList.remove('dot-pulse'); }
+    }
+
+    function setCwd(cwd) {
+      const short = cwd.split('/').length > 3 ? '…/' + cwd.split('/').slice(-2).join('/') : cwd;
+      $('#bar-cwd').textContent = short;
+      $('#bar-cwd').title = cwd;
+      $('#sb-cwd').textContent = cwd;
+      $('#sb-cwd').title = cwd;
+      $('#sb-m-cwd').textContent = cwd;
+      $('#cwd-welcome').textContent = cwd;
+    }
+
+    // ═══ WELCOME ═══
+    function showWelcome() {
+      const cwd = $('#bar-cwd').title || '';
+      const w = document.createElement('div');
+      w.id = 'welcome-msg';
+      w.className = 'flex flex-col items-center justify-center text-center pt-16 sm:pt-24 pb-10';
+      w.innerHTML = `<div class="relative mb-4"><div class="absolute inset-0 rounded-2xl bg-orange-500/10 blur-xl"></div><img src="logo.png" alt="AIOS" class="relative w-16 h-16 rounded-xl" onerror="this.parentElement.innerHTML='<div class=\\'w-16 h-16 rounded-xl bg-orange-500 flex items-center justify-center\\'><span class=\\'text-white font-bold text-2xl\\'>A</span></div>'"></div><div class="text-[10px] font-bold tracking-[0.2em] text-orange-400 uppercase mb-1">AIOS Terminal</div><div class="text-[10px] text-neutral-600 tracking-widest uppercase mb-6">Remote Control</div><div class="grid grid-cols-3 gap-2 max-w-md mx-auto px-4 mb-6">${QUICK_ACTIONS.slice(0,3).map(a=>`<button onclick="quickAction(${esc(JSON.stringify(a.cmd).replace(/"/g,'&quot;'))})" class="px-3 py-2 rounded-lg border border-neutral-800/50 hover:border-orange-500/30 bg-neutral-900/30 hover:bg-neutral-900/60 transition-all text-[10px] text-neutral-500 hover:text-neutral-300"><span class="text-orange-500/40 mr-1">${a.icon}</span>${esc(a.label)}</button>`).join('')}</div><div class="text-neutral-800 text-[9px] mt-2 term-font"><span class="text-neutral-700">⌘K</span> command palette · <span class="text-neutral-700">⌘T</span> new session · <span class="text-neutral-700">⌘?</span> shortcuts</div><div id="cwd-welcome" class="text-neutral-700 text-[10px] mt-4 term-font truncate max-w-full px-8">${esc(cwd)}</div>`;
+      messagesEl.appendChild(w);
+    }
+
+    // ═══ WEBSOCKET ═══
+    let reconnectDelay = 1000;
+
+    let reconnectAttempts = 0;
+
+    function connect() {
+      if (!TOKEN) { setAllStatus('No token', 'red'); addSystemMessage('Add ?token=YOUR_TOKEN to the URL'); return; }
+      if (S.ws && S.ws.readyState <= 1) return;
+      setAllStatus('Connecting…', 'yellow');
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      const ws = new WebSocket(`${proto}://${location.host}/ws?token=${TOKEN}`);
+      S.ws = ws;
+      ws.onopen = () => {
+        setAllStatus('Connected', 'green');
+        reconnectBar.classList.add('hidden');
+        reconnectDelay = 1000;
+        reconnectAttempts = 0;
+        if (S.pendingMessages.length > 0) {
+          toast(`Sending ${S.pendingMessages.length} queued message(s)`, 'info');
+          // Send queued messages
+          while (S.pendingMessages.length > 0) {
+            const text = S.pendingMessages.shift();
+            addUserMessage(text);
+            autoNameTab(text);
+            setProcessing(true);
+            showThinking();
+            const tab = getActiveTab();
+            ws.send(JSON.stringify({ type: 'query', prompt: text, sessionId: tab?.sessionId || null, tabId: tab?.id || null }));
+          }
+        }
+      };
+      ws.onclose = () => {
+        S.ws = null;
+        reconnectAttempts++;
+        if (S.isProcessing) setProcessing(false);
+        reconnectBar.classList.remove('hidden');
+        const delay = Math.min(reconnectDelay * Math.pow(1.5, reconnectAttempts - 1), 30000);
+        setAllStatus(`Reconnecting in ${Math.round(delay/1000)}s…`, 'red');
+        setTimeout(connect, delay);
+      };
+      ws.onerror = () => {};
+      ws.onmessage = e => { try { handleMessage(JSON.parse(e.data)); } catch(err) { console.error('[aios]', err); } };
+    }
+
+    // ═══ MESSAGE HANDLER ═══
+    function handleMessage(msg) {
+      switch (msg.type) {
+        case 'welcome':
+          setCwd(msg.cwd);
+          if (msg.companyName) $('#bar-company').textContent = msg.companyName;
+          break;
+        case 'system':
+          if (msg.subtype === 'init' && msg.session_id) {
+            const tab = getActiveTab();
+            if (tab) tab.sessionId = msg.session_id;
+            $('#bar-cost').classList.remove('hidden');
+            $('#bar-cost').textContent = '$0.00';
+          }
+          break;
+        case 'stream_event': removeThinking(); handleStream(msg.event); break;
+        case 'assistant':
+          removeThinking();
+          if (msg.message?.content && !S.textEl) renderAssistantFull(msg.message.content);
+          break;
+        case 'user':
+          if (msg.message?.content) for (const b of msg.message.content) { if (b.type === 'tool_result') renderToolResult(b); }
+          break;
+        case 'result': handleResult(msg); loadSessionHistory(); break;
+        case 'query_complete': setProcessing(false); break;
+        case 'error': removeThinking(); addErrorMessage(msg.message); toast(msg.message, 'error'); setProcessing(false); break;
+        case 'schedules_changed': loadSchedules(); break;
+        case 'schedule_execution':
+          if (msg.status === 'started') { addSystemMessage(`⏱ Running: ${msg.taskName}`); toast(`Running: ${msg.taskName}`, 'info'); }
+          else if (msg.status === 'completed') { addSystemMessage(`✓ Completed: ${msg.taskName}`); toast(`Completed: ${msg.taskName}`, 'success'); }
+          else if (msg.status === 'failed') { addSystemMessage(`✗ Failed: ${msg.taskName}`); toast(`Failed: ${msg.taskName}`, 'error'); }
+          break;
+        case 'session_saved': break; // Silent
+      }
+    }
+
+    // ═══ STREAM ═══
+    function handleStream(ev) {
+      if (!ev) return;
+      if (ev.type === 'content_block_start') {
+        const cb = ev.content_block;
+        if (cb?.type === 'thinking') {
+          S.thinkingBlockBuf = '';
+          S.thinkingBlockEl = createThinkingBlock();
+        }
+        else if (cb?.type === 'text') { S.textBuf = ''; S.textEl = createTextBlock(); }
+        else if (cb?.type === 'tool_use') { S.toolInputs[ev.index] = ''; S.toolEls[ev.index] = createToolCard(cb.name, cb.id); }
+      }
+      if (ev.type === 'content_block_delta') {
+        const d = ev.delta;
+        if (d?.type === 'thinking_delta' && d.thinking) {
+          S.thinkingBlockBuf += d.thinking;
+          if (S.thinkingBlockEl) {
+            const content = S.thinkingBlockEl.querySelector('.thinking-content');
+            if (content) content.textContent = S.thinkingBlockBuf;
+          }
+          scrollBottom();
+        }
+        else if (d?.type === 'text_delta' && d.text) { S.textBuf += d.text; scheduleRender(); }
+        else if (d?.type === 'input_json_delta' && d.partial_json && S.toolInputs[ev.index] !== undefined) { S.toolInputs[ev.index] += d.partial_json; }
+      }
+      if (ev.type === 'content_block_stop') {
+        if (S.thinkingBlockEl) {
+          const summary = S.thinkingBlockEl.querySelector('summary');
+          if (summary) summary.textContent = 'Thought for a moment';
+          S.thinkingBlockEl = null;
+          S.thinkingBlockBuf = '';
+        }
+        const card = S.toolEls[ev.index];
+        if (card) { try { updateToolInput(card, JSON.parse(S.toolInputs[ev.index] || '{}')); } catch { updateToolInputRaw(card, S.toolInputs[ev.index] || ''); } }
+        if (S.textEl && S.textBuf) flushRender();
+      }
+    }
+
+    function scheduleRender() { if (S.renderQueued) return; S.renderQueued = true; S.renderTimer = setTimeout(flushRender, 80); }
+    function flushRender() {
+      S.renderQueued = false;
+      if (S.renderTimer) { clearTimeout(S.renderTimer); S.renderTimer = null; }
+      if (!S.textEl || !S.textBuf) return;
+      S.textEl.innerHTML = renderMd(S.textBuf);
+      postProcessCode(S.textEl);
+      scrollBottom();
+    }
+
+    // ═══ RENDERING ═══
+    function getContainer() {
+      let c = messagesEl.querySelector('.assistant-active');
+      if (!c) { $('#welcome-msg')?.remove(); c = document.createElement('div'); c.className = 'assistant-active space-y-1 fade-in'; messagesEl.appendChild(c); }
+      return c;
+    }
+    function createTextBlock() {
+      const el = document.createElement('div');
+      el.className = 'ai-text text-[13px] sm:text-[14px] term-font';
+      getContainer().appendChild(el);
+      scrollBottom();
+      return el;
+    }
+
+    // Thinking
+    function showThinking() {
+      if (S.thinkingEl) return;
+      const el = document.createElement('div');
+      el.className = 'flex items-center gap-1.5 py-3 px-1 fade-in';
+      el.innerHTML = `<div class="w-1.5 h-1.5 rounded-full bg-orange-500/50 thinking-dot"></div><div class="w-1.5 h-1.5 rounded-full bg-orange-500/50 thinking-dot" style="animation-delay:0.16s"></div><div class="w-1.5 h-1.5 rounded-full bg-orange-500/50 thinking-dot" style="animation-delay:0.32s"></div>`;
+      getContainer().appendChild(el);
+      S.thinkingEl = el;
+      scrollBottom();
+    }
+    function removeThinking() { if (S.thinkingEl) { S.thinkingEl.remove(); S.thinkingEl = null; } }
+
+    // Tool cards
+    function createToolCard(name, id) {
+      const container = getContainer();
+      const card = document.createElement('div');
+      card.className = 'tool-card running border border-neutral-800/60 rounded bg-neutral-900/30 overflow-hidden my-1 fade-in';
+      card.dataset.toolId = CSS.escape(id);
+      card.setAttribute('data-raw-id', id);
+
+      const labels = { Read:'read', Edit:'edit', Write:'write', Bash:'bash', Glob:'glob', Grep:'grep', WebSearch:'web-search', WebFetch:'fetch', Agent:'agent', TodoWrite:'todo' };
+      const label = labels[name] || name;
+
+      card.innerHTML = `
+        <div class="tool-header flex items-center gap-2 px-3 py-1 cursor-pointer select-none hover:bg-white/[0.015] transition-colors" role="button" aria-expanded="false">
+          <span class="tool-spinner text-orange-500/60 text-[10px] spin term-font">⟳</span>
+          <span class="text-neutral-500 text-[11px] term-font">${esc(label)}</span>
+          <span class="tool-file text-neutral-700 text-[10px] truncate flex-1 term-font"></span>
+          <span class="tool-chevron text-neutral-700 text-[9px] transition-transform">▸</span>
+        </div>
+        <div class="tool-body hidden px-3 py-1.5 border-t border-neutral-800/30 text-[11px]">
+          <div class="tool-input text-neutral-600 term-font">…</div>
+          <div class="tool-result hidden mt-1.5 pt-1.5 border-t border-neutral-800/30"></div>
+        </div>
+      `;
+      const header = card.querySelector('.tool-header');
+      const body = card.querySelector('.tool-body');
+      const chevron = card.querySelector('.tool-chevron');
+      header.onclick = () => { const open = !body.classList.toggle('hidden'); chevron.textContent = open ? '▾' : '▸'; header.setAttribute('aria-expanded', open); };
+      container.appendChild(card);
+      scrollBottom();
+      return card;
+    }
+
+    function updateToolInput(card, input) {
+      const inputDiv = card.querySelector('.tool-input');
+      const fileSpan = card.querySelector('.tool-file');
+      if (!inputDiv) return;
+      const label = card.querySelector('.text-neutral-500.term-font')?.textContent || '';
+      let display = '', short = '';
+      if (['read','edit','write'].includes(label) && input.file_path) { const p = input.file_path.split('/'); short = p.slice(-2).join('/'); display = input.file_path; }
+      else if (label === 'bash' && input.command) { short = input.command.length > 50 ? input.command.substring(0,50)+'…' : input.command; display = '$ ' + input.command; }
+      else if (['glob','grep'].includes(label) && input.pattern) { short = input.pattern; display = input.pattern + (input.path ? ' in ' + input.path : ''); }
+      else { display = JSON.stringify(input,null,2); short = (Object.values(input)[0]?.toString?.() || '').substring(0,40); }
+      if (fileSpan && short) fileSpan.textContent = short;
+      inputDiv.innerHTML = `<pre class="whitespace-pre-wrap text-neutral-600 text-[11px] break-all m-0 bg-transparent border-0 p-0 term-font">${esc(display)}</pre>`;
+    }
+    function updateToolInputRaw(card, raw) {
+      const inputDiv = card.querySelector('.tool-input');
+      if (inputDiv) inputDiv.innerHTML = `<pre class="whitespace-pre-wrap text-neutral-700 text-[11px] break-all m-0 bg-transparent border-0 p-0 term-font">${esc(raw)}</pre>`;
+    }
+
+    function renderToolResult(block) {
+      const card = messagesEl.querySelector(`[data-raw-id="${CSS.escape(block.tool_use_id)}"]`);
+      if (!card) return;
+      card.classList.remove('running');
+      card.classList.add(block.is_error ? 'error' : 'done');
+      const spinner = card.querySelector('.tool-spinner');
+      if (spinner) { spinner.classList.remove('spin'); spinner.textContent = block.is_error ? '✗' : '✓'; spinner.className = `tool-spinner text-[10px] term-font ${block.is_error ? 'text-red-400' : 'text-green-500/70'}`; }
+      let content = '';
+      if (typeof block.content === 'string') content = block.content;
+      else if (Array.isArray(block.content)) content = block.content.filter(c=>c.type==='text').map(c=>c.text).join('\n');
+      if (content) {
+        const resultDiv = card.querySelector('.tool-result');
+        const t = content.length > 2000 ? content.substring(0,2000)+'\n… (truncated)' : content;
+        resultDiv.innerHTML = `<pre class="whitespace-pre-wrap text-neutral-700 text-[10px] max-h-40 overflow-y-auto break-all term-font m-0 bg-transparent border-0 p-0">${esc(t)}</pre>`;
+        resultDiv.classList.remove('hidden');
+      }
+    }
+
+    function renderAssistantFull(content) {
+      for (const b of content) {
+        if (b.type === 'text' && b.text) { const el = createTextBlock(); el.innerHTML = renderMd(b.text); postProcessCode(el); }
+        else if (b.type === 'tool_use') { const card = createToolCard(b.name, b.id); if (b.input) updateToolInput(card, b.input); }
+      }
+      scrollBottom();
+    }
+
+    function handleResult(msg) {
+      removeThinking();
+      const container = getContainer();
+      container.classList.remove('assistant-active');
+      flushRender();
+      S.textEl = null; S.textBuf = ''; S.toolEls = {}; S.toolInputs = {};
+      S.thinkingBlockEl = null; S.thinkingBlockBuf = '';
+      const tab = getActiveTab();
+      if (msg.session_id && tab) tab.sessionId = msg.session_id;
+      if (msg.total_cost_usd !== undefined) {
+        S.totalCost = msg.total_cost_usd;
+        if (tab) tab.cost = msg.total_cost_usd;
+        $('#bar-cost').textContent = '$' + msg.total_cost_usd.toFixed(4);
+        $('#bar-cost').classList.remove('hidden');
+      }
+      if (msg.subtype && msg.subtype !== 'success') {
+        const b = document.createElement('div');
+        b.className = 'text-[10px] text-yellow-600 term-font mt-1';
+        b.textContent = msg.subtype === 'error_max_turns' ? '(turn limit)' : msg.subtype === 'error_max_budget_usd' ? '(budget limit)' : msg.subtype;
+        container.appendChild(b);
+        if (msg.subtype !== 'success') toast(msg.subtype.replace(/_/g, ' '), 'warning');
+      }
+      setProcessing(false);
+      scrollBottom();
+      if (document.hidden) {
+        document.title = '● ' + originalTitle;
+        // Browser notification if tab is hidden
+        if (Notification.permission === 'granted') {
+          new Notification('AIOS', { body: 'Query completed', icon: 'logo.png', tag: 'aios-complete' });
+        }
+      }
+    }
+
+    function addUserMessage(text) {
+      $('#welcome-msg')?.remove();
+      const prev = messagesEl.querySelector('.assistant-active');
+      if (prev) prev.classList.remove('assistant-active');
+      const div = document.createElement('div');
+      div.className = 'flex items-start gap-2 fade-in mb-3';
+      div.innerHTML = `<span class="text-orange-500/50 text-sm font-bold term-font shrink-0 select-none leading-relaxed">&gt;</span><pre class="whitespace-pre-wrap text-neutral-200 text-[13px] sm:text-[14px] break-words m-0 term-font leading-relaxed">${esc(text)}</pre>`;
+      messagesEl.appendChild(div);
+      scrollBottom();
+    }
+
+    function addSystemMessage(text) {
+      const div = document.createElement('div');
+      div.className = 'text-center text-neutral-700 text-[10px] py-2 term-font';
+      div.textContent = text;
+      messagesEl.appendChild(div);
+      scrollBottom();
+    }
+
+    function addErrorMessage(text) {
+      const div = document.createElement('div');
+      div.className = 'text-red-500/70 text-[12px] term-font pl-4 fade-in';
+      div.textContent = '✗ ' + text;
+      messagesEl.appendChild(div);
+      scrollBottom();
+    }
+
+    // ═══ ACTIONS ═══
+    function sendQuery() {
+      const text = inputEl.value.trim();
+      if (!text || S.isProcessing) return;
+      if (!S.ws || S.ws.readyState !== WebSocket.OPEN) {
+        // Queue message if disconnected
+        S.pendingMessages.push(text);
+        toast('Queued — will send when reconnected', 'warning');
+        inputEl.value = ''; inputEl.style.height = 'auto';
+        return;
+      }
+      addUserMessage(text);
+      autoNameTab(text);
+      inputEl.value = ''; inputEl.style.height = 'auto';
+      setProcessing(true);
+      showThinking();
+      const tab = getActiveTab();
+      S.ws.send(JSON.stringify({ type: 'query', prompt: text, sessionId: tab?.sessionId || null, tabId: tab?.id || null }));
+      if (window.innerWidth < 768) inputEl.blur();
+    }
+
+    function setProcessing(val) {
+      S.isProcessing = val;
+      btnSend.disabled = val;
+      btnSend.classList.toggle('hidden', val);
+      btnStop.classList.toggle('hidden', !val);
+      setAllStatus(val ? 'Working…' : 'Connected', val ? 'yellow' : 'green');
+      document.title = val ? 'AIOS ⟳' : originalTitle;
+    }
+
+    function abortQuery() {
+      if (S.ws && S.ws.readyState === WebSocket.OPEN) S.ws.send(JSON.stringify({ type: 'abort' }));
+      removeThinking(); setProcessing(false);
+    }
+
+    function newSession() { createNewTab(); }
+
+    // ═══ EVENTS ═══
+    btnSend.onclick = sendQuery;
+    btnStop.onclick = abortQuery;
+
+    inputEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendQuery(); return; }
+      if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); sendQuery(); return; }
+      if (e.key === 'Escape' && S.isProcessing) { abortQuery(); return; }
+      // Slash command completion
+      if (e.key === 'Tab' && inputEl.value.startsWith('/')) {
+        e.preventDefault();
+        // Could be expanded with full autocomplete later
+      }
+    });
+
+    inputEl.addEventListener('input', () => { inputEl.style.height = 'auto'; inputEl.style.height = Math.min(inputEl.scrollHeight, 150) + 'px'; });
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', () => { document.getElementById('app').style.height = window.visualViewport.height + 'px'; scrollBottom(); });
+    }
+
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && !S.isProcessing) document.title = originalTitle; });
+
+    // ═══ COMMANDS & FILES ═══
+    function apiUrl(endpoint) { return `${endpoint}?token=${TOKEN}`; }
+
+    async function loadCommands() {
+      try {
+        const res = await fetch(apiUrl('/api/commands'));
+        if (!res.ok) return;
+        const cmds = await res.json();
+        const render = (listEl, mobile) => {
+          if (!cmds.length) { listEl.innerHTML = '<div class="text-[10px] text-neutral-700 px-3 py-1">No commands</div>'; return; }
+          listEl.innerHTML = cmds.map(c => `
+            <button onclick="runCommand('/${esc(c.name)}', ${mobile})" class="w-full text-left px-3 py-1 rounded hover:bg-orange-500/[0.06] transition-colors flex items-center gap-2 group">
+              <span class="text-orange-500/40 text-[11px] term-font shrink-0 group-hover:text-orange-400">/</span>
+              <span class="text-[11px] text-neutral-400 group-hover:text-neutral-200 truncate">${esc(c.name)}</span>
+            </button>
+          `).join('');
+        };
+        render(document.getElementById('commands-list'), false);
+        render(document.getElementById('m-commands-list'), true);
+      } catch {}
+    }
+
+    function runCommand(cmd, closeMobile) {
+      if (closeMobile) closeSidebar();
+      inputEl.value = cmd;
+      sendQuery();
+    }
+
+    let currentFilesPath = '.';
+    async function loadFiles(dir) {
+      dir = dir || '.';
+      currentFilesPath = dir;
+      try {
+        const res = await fetch(apiUrl('/api/files') + '&path=' + encodeURIComponent(dir));
+        if (!res.ok) return;
+        const data = await res.json();
+        const renderList = (listEl, breadcrumbEl, mobile) => {
+          const parts = data.path === '.' ? [] : data.path.split('/');
+          let bc = '<button onclick="loadFiles(\'.\')' + (mobile ? ';' : '') + '" class="text-orange-500/50 hover:text-orange-400 text-[10px] term-font transition-colors">~</button>';
+          let accum = '';
+          for (const p of parts) {
+            accum += (accum ? '/' : '') + p;
+            const a = accum;
+            bc += `<span class="text-neutral-700 text-[10px] mx-0.5">/</span><button onclick="loadFiles('${esc(a)}')" class="text-neutral-500 hover:text-neutral-300 text-[10px] term-font transition-colors truncate">${esc(p)}</button>`;
+          }
+          breadcrumbEl.innerHTML = bc;
+
+          if (!data.entries.length) { listEl.innerHTML = '<div class="text-[10px] text-neutral-700 px-3 py-1">Empty</div>'; return; }
+          listEl.innerHTML = data.entries.map(e => {
+            const isDir = e.type === 'dir';
+            const entryPath = data.path === '.' ? e.name : data.path + '/' + e.name;
+            if (isDir) {
+              return `<button onclick="loadFiles('${esc(entryPath)}')" class="w-full text-left px-3 py-[3px] rounded hover:bg-white/[0.02] transition-colors flex items-center gap-2 group">
+                <span class="text-orange-500/40 text-[10px] shrink-0">▸</span>
+                <span class="text-[11px] text-neutral-300 group-hover:text-neutral-100 truncate">${esc(e.name)}</span>
+              </button>`;
+            }
+            return `<button onclick="mentionFile('${esc(entryPath)}', ${mobile})" class="w-full text-left px-3 py-[3px] rounded hover:bg-white/[0.02] transition-colors flex items-center gap-2 group">
+              <span class="text-neutral-700 text-[10px] shrink-0">•</span>
+              <span class="text-[11px] text-neutral-500 group-hover:text-neutral-300 truncate term-font">${esc(e.name)}</span>
+            </button>`;
+          }).join('');
+        };
+        renderList(document.getElementById('files-list'), document.getElementById('files-breadcrumb'), false);
+        renderList(document.getElementById('m-files-list'), document.getElementById('m-files-breadcrumb'), true);
+      } catch {}
+    }
+
+    function mentionFile(filePath, closeMobile) {
+      if (closeMobile) closeSidebar();
+      const cur = inputEl.value;
+      const prefix = cur && !cur.endsWith(' ') ? cur + ' ' : cur;
+      inputEl.value = prefix + filePath;
+      inputEl.focus();
+    }
+
+    // ═══ SCHEDULES ═══
+    async function loadSchedules() {
+      try {
+        const res = await fetch(apiUrl('/api/schedules'));
+        if (!res.ok) return;
+        const tasks = await res.json();
+        renderScheduleSidebar(tasks);
+      } catch {}
+    }
+
+    function renderScheduleSidebar(tasks) {
+      const el = document.getElementById('schedule-list');
+      if (!tasks.length) {
+        el.innerHTML = `<div class="mx-1 my-1 rounded-lg border border-dashed border-neutral-800/60 bg-neutral-900/30 px-3 py-3 text-center">
+          <div class="text-neutral-800 text-sm mb-1">⏱</div>
+          <div class="text-[10px] text-neutral-700">No scheduled tasks</div>
+          <button onclick="showScheduleModal()" class="mt-2 text-[10px] text-orange-500/60 hover:text-orange-400 transition-colors">+ Create schedule</button>
+        </div>`;
+        return;
+      }
+      const typeColors = { daily:'text-blue-400/70 bg-blue-500/10', weekly:'text-purple-400/70 bg-purple-500/10', interval:'text-cyan-400/70 bg-cyan-500/10', once:'text-amber-400/70 bg-amber-500/10' };
+      const enabledCount = tasks.filter(t => t.enabled).length;
+      let html = enabledCount > 0 ? `<div class="px-3 pb-1 text-[9px] text-neutral-800">${enabledCount} active</div>` : '';
+      html += tasks.slice(0, 5).map(t => {
+        const colors = typeColors[t.type] || 'text-neutral-600 bg-neutral-800/50';
+        const info = formatScheduleInfo(t);
+        return `<div class="flex items-center px-3 py-1.5 rounded-md text-xs hover:bg-neutral-800/60 transition-all group">
+          <span class="w-1.5 h-1.5 rounded-full shrink-0 ${t.enabled ? 'bg-green-500/80' : 'bg-neutral-700'}"></span>
+          <span class="truncate flex-1 ml-2 ${t.enabled ? 'text-neutral-400' : 'text-neutral-600'}">${esc(t.name)}</span>
+          <span class="text-[8px] px-1.5 py-0.5 rounded-full shrink-0 ${colors}">${esc(info)}</span>
+        </div>`;
+      }).join('');
+      if (tasks.length > 5) html += `<div class="text-center text-[9px] text-neutral-700 py-1">+${tasks.length - 5} more</div>`;
+      html += `<button onclick="showScheduleModal()" class="w-full text-left px-3 py-1.5 text-[10px] text-orange-500/50 hover:text-orange-400 transition-colors flex items-center gap-1.5"><span>+</span><span>Manage schedules</span></button>`;
+      el.innerHTML = html;
+    }
+
+    function formatScheduleInfo(t) {
+      if (!t.enabled) return 'paused';
+      if (t.type === 'daily' && t.time) return 'daily ' + t.time;
+      if (t.type === 'weekly' && t.time) { const d = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']; return (d[t.dayOfWeek||0]) + ' ' + t.time; }
+      if (t.type === 'interval' && t.intervalMinutes) return t.intervalMinutes >= 60 ? 'every ' + Math.round(t.intervalMinutes/60) + 'h' : 'every ' + t.intervalMinutes + 'm';
+      if (t.type === 'once' && t.date && t.time) return t.date + ' ' + t.time;
+      return '—';
+    }
+
+    function showScheduleModal() {
+      // Remove existing modal
+      document.getElementById('schedule-modal')?.remove();
+      const modal = document.createElement('div');
+      modal.id = 'schedule-modal';
+      modal.className = 'fixed inset-0 z-50 flex items-center justify-center';
+      modal.style.background = 'rgba(0,0,0,0.6)';
+      modal.style.backdropFilter = 'blur(8px)';
+      modal.onclick = e => { if (e.target === modal) modal.remove(); };
+      modal.innerHTML = `<div class="w-96 max-h-[80vh] overflow-y-auto bg-neutral-900 border border-neutral-700/50 rounded-xl shadow-2xl p-5" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-sm font-semibold text-neutral-200">Create Schedule</h2>
+          <button onclick="document.getElementById('schedule-modal').remove()" class="text-neutral-600 hover:text-neutral-300 transition-colors text-lg">✕</button>
+        </div>
+        <div class="space-y-3">
+          <div>
+            <label class="text-[10px] text-neutral-500 uppercase tracking-wider block mb-1">Name</label>
+            <input id="sched-name" type="text" placeholder="e.g. Morning Report" class="w-full bg-neutral-800 border border-neutral-700/50 rounded-lg px-3 py-2 text-sm text-neutral-200 placeholder:text-neutral-700 outline-none focus:border-orange-500/40 transition-colors">
+          </div>
+          <div>
+            <label class="text-[10px] text-neutral-500 uppercase tracking-wider block mb-1">Command</label>
+            <textarea id="sched-command" rows="3" placeholder="What should AIOS do?" class="w-full bg-neutral-800 border border-neutral-700/50 rounded-lg px-3 py-2 text-sm text-neutral-200 placeholder:text-neutral-700 outline-none focus:border-orange-500/40 transition-colors resize-none term-font"></textarea>
+          </div>
+          <div>
+            <label class="text-[10px] text-neutral-500 uppercase tracking-wider block mb-1">Frequency</label>
+            <select id="sched-type" onchange="updateScheduleForm()" class="w-full bg-neutral-800 border border-neutral-700/50 rounded-lg px-3 py-2 text-sm text-neutral-200 outline-none focus:border-orange-500/40 transition-colors">
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="interval">Interval</option>
+              <option value="once">Once</option>
+            </select>
+          </div>
+          <div id="sched-extra"></div>
+          <div class="flex justify-end gap-2 pt-2">
+            <button onclick="document.getElementById('schedule-modal').remove()" class="px-3 py-1.5 text-[11px] text-neutral-500 hover:text-neutral-300 rounded-lg hover:bg-neutral-800 transition-colors">Cancel</button>
+            <button onclick="submitSchedule()" class="px-4 py-1.5 text-[11px] font-medium text-white bg-orange-500/90 hover:bg-orange-500 rounded-lg transition-colors">Create</button>
+          </div>
+        </div>
+      </div>`;
+      document.body.appendChild(modal);
+      updateScheduleForm();
+    }
+
+    function updateScheduleForm() {
+      const type = document.getElementById('sched-type').value;
+      const extra = document.getElementById('sched-extra');
+      if (type === 'daily' || type === 'weekly' || type === 'once') {
+        let html = `<label class="text-[10px] text-neutral-500 uppercase tracking-wider block mb-1">Time</label>
+          <input id="sched-time" type="time" value="09:00" class="bg-neutral-800 border border-neutral-700/50 rounded-lg px-3 py-2 text-sm text-neutral-200 outline-none focus:border-orange-500/40 transition-colors">`;
+        if (type === 'weekly') {
+          html += `<label class="text-[10px] text-neutral-500 uppercase tracking-wider block mb-1 mt-2">Day</label>
+            <select id="sched-day" class="bg-neutral-800 border border-neutral-700/50 rounded-lg px-3 py-2 text-sm text-neutral-200 outline-none focus:border-orange-500/40 transition-colors">
+              <option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option>
+            </select>`;
+        }
+        if (type === 'once') {
+          html += `<label class="text-[10px] text-neutral-500 uppercase tracking-wider block mb-1 mt-2">Date</label>
+            <input id="sched-date" type="date" class="bg-neutral-800 border border-neutral-700/50 rounded-lg px-3 py-2 text-sm text-neutral-200 outline-none focus:border-orange-500/40 transition-colors">`;
+        }
+        extra.innerHTML = html;
+      } else if (type === 'interval') {
+        extra.innerHTML = `<label class="text-[10px] text-neutral-500 uppercase tracking-wider block mb-1">Every (minutes)</label>
+          <input id="sched-interval" type="number" min="1" value="60" class="bg-neutral-800 border border-neutral-700/50 rounded-lg px-3 py-2 text-sm text-neutral-200 outline-none focus:border-orange-500/40 transition-colors w-32">`;
+      }
+    }
+
+    async function submitSchedule() {
+      const name = document.getElementById('sched-name')?.value?.trim();
+      const command = document.getElementById('sched-command')?.value?.trim();
+      const type = document.getElementById('sched-type')?.value;
+      if (!name || !command) return;
+      const data = { name, command, type };
+      if (type === 'daily' || type === 'weekly' || type === 'once') data.time = document.getElementById('sched-time')?.value;
+      if (type === 'weekly') data.dayOfWeek = parseInt(document.getElementById('sched-day')?.value || '1');
+      if (type === 'once') data.date = document.getElementById('sched-date')?.value;
+      if (type === 'interval') data.intervalMinutes = parseInt(document.getElementById('sched-interval')?.value || '60');
+
+      try {
+        await fetch(apiUrl('/api/schedules'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
+          body: JSON.stringify(data),
+        });
+        document.getElementById('schedule-modal')?.remove();
+        loadSchedules();
+      } catch (err) {
+        console.error('Failed to create schedule:', err);
+      }
+    }
+
+    // ═══ TOAST NOTIFICATIONS ═══
+    function toast(message, type = 'info', duration = 4000) {
+      const container = document.getElementById('toast-container');
+      const colors = {
+        info: 'border-neutral-700/50 bg-neutral-900/95',
+        success: 'border-green-500/30 bg-neutral-900/95',
+        error: 'border-red-500/30 bg-neutral-900/95',
+        warning: 'border-yellow-500/30 bg-neutral-900/95',
+      };
+      const icons = { info: '●', success: '✓', error: '✗', warning: '!' };
+      const iconColors = { info: 'text-orange-500', success: 'text-green-400', error: 'text-red-400', warning: 'text-yellow-400' };
+
+      const el = document.createElement('div');
+      el.className = `toast-in flex items-center gap-2.5 px-4 py-2.5 rounded-lg border shadow-xl shadow-black/40 ${colors[type] || colors.info}`;
+      el.innerHTML = `<span class="${iconColors[type] || iconColors.info} text-xs shrink-0">${icons[type]}</span><span class="text-[12px] text-neutral-300 flex-1">${esc(message)}</span><button onclick="this.parentElement.remove()" class="text-neutral-700 hover:text-neutral-400 text-[10px] shrink-0 ml-2">✕</button>`;
+      container.appendChild(el);
+
+      setTimeout(() => {
+        el.classList.add('toast-out');
+        setTimeout(() => el.remove(), 200);
+      }, duration);
+    }
+
+    // ═══ COMMAND PALETTE ═══
+    let paletteItems = [];
+    let paletteSelected = 0;
+    let paletteFiltered = [];
+
+    function openPalette() {
+      const palette = document.getElementById('command-palette');
+      palette.classList.remove('hidden');
+      const input = document.getElementById('palette-input');
+      input.value = '';
+      input.focus();
+      loadPaletteItems();
+      renderPaletteResults('');
+    }
+
+    function closePalette() {
+      document.getElementById('command-palette').classList.add('hidden');
+    }
+
+    async function loadPaletteItems() {
+      paletteItems = [];
+      // Built-in actions
+      paletteItems.push({ type: 'action', label: 'New Session', sublabel: 'action', action: () => { createNewTab(); closePalette(); } });
+      paletteItems.push({ type: 'action', label: 'Export Conversation', sublabel: 'action', action: () => { exportConversation(); closePalette(); } });
+      paletteItems.push({ type: 'action', label: 'Keyboard Shortcuts', sublabel: 'help', action: () => { closePalette(); showShortcutsHelp(); } });
+
+      // Quick actions
+      QUICK_ACTIONS.forEach(a => {
+        paletteItems.push({ type: 'quick', label: a.label, sublabel: 'quick action', action: () => { closePalette(); quickAction(a.cmd); } });
+      });
+
+      // Commands
+      try {
+        const res = await fetch(apiUrl('/api/commands'));
+        if (res.ok) {
+          const cmds = await res.json();
+          cmds.forEach(c => {
+            paletteItems.push({ type: 'command', label: '/' + c.name, sublabel: 'command', action: () => { closePalette(); runCommand('/' + c.name, false); } });
+          });
+        }
+      } catch {}
+
+      // Session history
+      try {
+        const res = await fetch(apiUrl('/api/sessions'));
+        if (res.ok) {
+          const sessions = await res.json();
+          sessions.slice(0, 10).forEach(s => {
+            paletteItems.push({ type: 'session', label: s.title, sublabel: formatTimeAgo(s.updatedAt), action: () => { closePalette(); resumeSession(s); } });
+          });
+        }
+      } catch {}
+    }
+
+    function renderPaletteResults(query) {
+      paletteFiltered = query
+        ? paletteItems.filter(i => i.label.toLowerCase().includes(query.toLowerCase()) || (i.sublabel || '').toLowerCase().includes(query.toLowerCase()))
+        : paletteItems;
+      paletteSelected = 0;
+
+      const container = document.getElementById('palette-results');
+      document.getElementById('palette-count').textContent = paletteFiltered.length + ' result' + (paletteFiltered.length !== 1 ? 's' : '');
+
+      if (!paletteFiltered.length) {
+        container.innerHTML = '<div class="px-4 py-10 text-center text-[11px] text-neutral-700">No results</div>';
+        return;
+      }
+
+      const typeIcons = { action: '◆', command: '/', quick: '⚡', session: '◷' };
+      const typeColors = { action: 'text-orange-500/70', command: 'text-orange-500/50', quick: 'text-cyan-500/50', session: 'text-purple-400/50' };
+
+      // Group by type if no query
+      if (!query) {
+        const groups = {};
+        paletteFiltered.forEach((item, i) => {
+          const g = item.type;
+          if (!groups[g]) groups[g] = [];
+          groups[g].push({ ...item, idx: i });
+        });
+        const labels = { action: 'Actions', command: 'Commands', quick: 'Quick Actions', session: 'Recent Sessions' };
+        let html = '';
+        for (const [type, items] of Object.entries(groups)) {
+          html += `<div class="px-4 pt-3 pb-1 text-[9px] uppercase tracking-[0.15em] text-neutral-700 font-semibold">${labels[type] || type}</div>`;
+          items.forEach(item => {
+            html += paletteItemHtml(item, item.idx, typeIcons, typeColors);
+          });
+        }
+        container.innerHTML = html;
+      } else {
+        container.innerHTML = paletteFiltered.map((item, i) => paletteItemHtml(item, i, typeIcons, typeColors)).join('');
+      }
+    }
+
+    function paletteItemHtml(item, idx, typeIcons, typeColors) {
+      return `<button onmouseenter="paletteSelected=${idx};highlightPaletteItem()" onclick="paletteFiltered[${idx}]?.action()" class="palette-item w-full text-left px-4 py-2 flex items-center gap-3 transition-all ${idx === paletteSelected ? 'selected' : 'hover:bg-neutral-800/40'}">
+        <span class="text-[11px] w-4 shrink-0 text-center term-font ${typeColors[item.type] || ''}">${typeIcons[item.type] || '•'}</span>
+        <span class="text-[13px] text-neutral-300 truncate flex-1">${esc(item.label)}</span>
+        ${item.sublabel ? `<span class="text-[9px] text-neutral-700 uppercase tracking-wider shrink-0">${esc(item.sublabel)}</span>` : ''}
+        ${idx === paletteSelected ? '<span class="text-[9px] text-neutral-700 shrink-0">↵</span>' : ''}
+      </button>`;
+    }
+
+    function highlightPaletteItem() {
+      document.querySelectorAll('.palette-item').forEach((el, i) => {
+        el.classList.toggle('selected', i === paletteSelected);
+      });
+    }
+
+    document.getElementById('palette-input')?.addEventListener('input', e => {
+      renderPaletteResults(e.target.value);
+    });
+
+    document.getElementById('palette-input')?.addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown') { e.preventDefault(); paletteSelected = Math.min(paletteSelected + 1, paletteFiltered.length - 1); highlightPaletteItem(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); paletteSelected = Math.max(paletteSelected - 1, 0); highlightPaletteItem(); }
+      else if (e.key === 'Enter') { e.preventDefault(); paletteFiltered[paletteSelected]?.action(); }
+      else if (e.key === 'Escape') { closePalette(); }
+    });
+
+    // ═══ KEYBOARD SHORTCUTS ═══
+    function showShortcutsHelp() { document.getElementById('shortcuts-modal').classList.remove('hidden'); }
+    function closeShortcutsHelp() { document.getElementById('shortcuts-modal').classList.add('hidden'); }
+
+    // ═══ EXPORT CONVERSATION ═══
+    function exportConversation() {
+      const tab = getActiveTab();
+      if (!tab) return;
+      // Build markdown from messages
+      let md = `# AIOS Conversation — ${tab.label}\n\n`;
+      md += `*Exported: ${new Date().toISOString()}*\n\n---\n\n`;
+
+      messagesEl.querySelectorAll(':scope > div').forEach(el => {
+        if (el.id === 'welcome-msg') return;
+        if (el.classList.contains('assistant-active') || el.querySelector('.ai-text')) {
+          // Assistant message
+          const textBlocks = el.querySelectorAll('.ai-text');
+          textBlocks.forEach(t => {
+            md += '**Claude:**\n\n';
+            // Extract text content, preserving code blocks
+            t.querySelectorAll('pre code').forEach(code => {
+              const lang = code.className?.match(/language-(\w+)/)?.[1] || '';
+              md += '```' + lang + '\n' + code.textContent + '\n```\n\n';
+            });
+            // Get non-code text
+            const clone = t.cloneNode(true);
+            clone.querySelectorAll('pre').forEach(p => p.remove());
+            const text = clone.textContent.trim();
+            if (text) md += text + '\n\n';
+          });
+          // Tool cards
+          el.querySelectorAll('.tool-card').forEach(card => {
+            const label = card.querySelector('.text-neutral-500.term-font')?.textContent || 'tool';
+            const file = card.querySelector('.tool-file')?.textContent || '';
+            md += `> 🔧 ${label} ${file}\n\n`;
+          });
+        } else if (el.querySelector('pre')) {
+          // User message
+          const text = el.querySelector('pre')?.textContent || '';
+          md += `**You:** ${text}\n\n`;
+        }
+      });
+
+      // Add cost info
+      if (tab.cost > 0) md += `\n---\n*Total cost: $${tab.cost.toFixed(4)}*\n`;
+
+      // Download
+      const blob = new Blob([md], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `aios-${tab.label.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.md`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast('Conversation exported', 'success');
+    }
+
+    // ═══ SESSION HISTORY ═══
+    let sessionHistory = [];
+
+    async function loadSessionHistory() {
+      try {
+        const res = await fetch(apiUrl('/api/sessions'));
+        if (!res.ok) return;
+        sessionHistory = await res.json();
+        renderSessionHistory();
+      } catch {}
+    }
+
+    function renderSessionHistory() {
+      const el = document.getElementById('history-list');
+      if (!sessionHistory.length) {
+        el.innerHTML = '<div class="text-[10px] text-neutral-700 px-3 py-1 italic">No history</div>';
+        return;
+      }
+      el.innerHTML = sessionHistory.slice(0, 20).map(s => {
+        const ago = formatTimeAgo(s.updatedAt);
+        const cost = s.totalCost > 0 ? `$${s.totalCost.toFixed(3)}` : '';
+        return `<button onclick="resumeSession(${esc(JSON.stringify(s).replace(/'/g, "\\'"))})" class="w-full text-left px-3 py-1.5 rounded-md hover:bg-neutral-800/60 transition-all group flex items-start gap-2">
+          <span class="text-purple-500/30 text-[9px] shrink-0 mt-0.5">◷</span>
+          <div class="flex-1 min-w-0">
+            <div class="text-[11px] text-neutral-400 group-hover:text-neutral-200 truncate transition-colors">${esc(s.title)}</div>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span class="text-[9px] text-neutral-700">${ago}</span>
+              ${cost ? `<span class="text-[9px] text-neutral-800 term-font">${cost}</span>` : ''}
+              <span class="text-[9px] text-neutral-800">${s.messageCount || 0} msgs</span>
+            </div>
+          </div>
+          <button onclick="event.stopPropagation();deleteSession('${s.id}')" class="opacity-0 group-hover:opacity-100 text-[9px] text-neutral-700 hover:text-red-400 transition-all shrink-0 mt-0.5">✕</button>
+        </button>`;
+      }).join('');
+    }
+
+    function resumeSession(session) {
+      saveCurrentTab();
+      const tab = createTab(session.title || 'Resumed');
+      activeTabId = tab.id;
+      tab.sessionId = session.claudeSessionId || null;
+      tab.cost = session.totalCost || 0;
+      S.textEl = null; S.textBuf = ''; S.toolEls = {}; S.toolInputs = {}; S.thinkingEl = null;
+      S.totalCost = tab.cost;
+      messagesEl.innerHTML = '';
+      if (tab.cost > 0) { $('#bar-cost').textContent = '$' + tab.cost.toFixed(4); $('#bar-cost').classList.remove('hidden'); }
+      // Show resumed indicator
+      const div = document.createElement('div');
+      div.className = 'text-center text-neutral-700 text-[10px] py-4 term-font';
+      div.innerHTML = `<span class="text-purple-500/50">◷</span> Resumed: ${esc(session.title)}<br><span class="text-neutral-800 text-[9px]">${session.messageCount || 0} previous messages</span>`;
+      messagesEl.appendChild(div);
+      renderTabs();
+      toast('Session resumed', 'info');
+    }
+
+    async function deleteSession(id) {
+      try {
+        await fetch(apiUrl('/api/sessions/' + id), { method: 'DELETE', headers: { Authorization: 'Bearer ' + TOKEN } });
+        loadSessionHistory();
+        toast('Session deleted', 'info');
+      } catch {}
+    }
+
+    function formatTimeAgo(ts) {
+      if (!ts) return '';
+      const diff = Date.now() - ts;
+      if (diff < 60_000) return 'just now';
+      if (diff < 3600_000) return Math.floor(diff / 60_000) + 'm ago';
+      if (diff < 86400_000) return Math.floor(diff / 3600_000) + 'h ago';
+      if (diff < 604800_000) return Math.floor(diff / 86400_000) + 'd ago';
+      return new Date(ts).toLocaleDateString('en-MY', { month: 'short', day: 'numeric' });
+    }
+
+    // ═══ THINKING BLOCKS ═══
+    function createThinkingBlock() {
+      const el = document.createElement('details');
+      el.className = 'thinking-block fade-in';
+      el.innerHTML = '<summary>Thinking…</summary><div class="thinking-content term-font"></div>';
+      getContainer().appendChild(el);
+      return el;
+    }
+
+    // ═══ AUTO-SESSION NAMING ═══
+    let firstPromptSent = {};
+    function autoNameTab(prompt) {
+      const tab = getActiveTab();
+      if (!tab || firstPromptSent[tab.id]) return;
+      firstPromptSent[tab.id] = true;
+      // Use first 40 chars of prompt as tab name
+      const name = prompt.length > 40 ? prompt.substring(0, 37) + '…' : prompt;
+      tab.label = name;
+      renderTabs();
+    }
+
+    // ═══ GLOBAL KEYBOARD SHORTCUTS ═══
+    document.addEventListener('keydown', e => {
+      // Cmd+K — Command palette
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        const palette = document.getElementById('command-palette');
+        if (palette.classList.contains('hidden')) openPalette();
+        else closePalette();
+        return;
+      }
+      // Cmd+T — New tab
+      if ((e.metaKey || e.ctrlKey) && e.key === 't') {
+        e.preventDefault();
+        createNewTab();
+        return;
+      }
+      // Cmd+W — Close tab
+      if ((e.metaKey || e.ctrlKey) && e.key === 'w') {
+        e.preventDefault();
+        if (tabs.length > 1) {
+          const activeTab = tabs.find(t => t.id === activeTabId);
+          if (activeTab) closeTab(activeTab.id);
+        }
+        return;
+      }
+      // Cmd+E — Export
+      if ((e.metaKey || e.ctrlKey) && e.key === 'e') {
+        e.preventDefault();
+        exportConversation();
+        return;
+      }
+      // Cmd+? or Cmd+/ — Shortcuts help
+      if ((e.metaKey || e.ctrlKey) && (e.key === '?' || e.key === '/')) {
+        e.preventDefault();
+        const modal = document.getElementById('shortcuts-modal');
+        if (modal.classList.contains('hidden')) showShortcutsHelp();
+        else closeShortcutsHelp();
+        return;
+      }
+      // Cmd+1-9 — Switch tabs
+      if ((e.metaKey || e.ctrlKey) && e.key >= '1' && e.key <= '9') {
+        e.preventDefault();
+        const idx = parseInt(e.key) - 1;
+        if (tabs[idx]) switchToTab(tabs[idx].id);
+        return;
+      }
+    });
+
+    // ═══ INIT ═══
+    // Create first tab
+    const firstTab = createTab('Session 1');
+    activeTabId = firstTab.id;
+    renderTabs();
+
+    // Render quick actions
+    renderQuickActions('quick-actions-desktop');
+    renderQuickActions('quick-actions-mobile');
+
+    connect();
+    inputEl.focus();
+    loadCommands();
+    loadFiles('.');
+    loadSchedules();
+    loadSessionHistory();
+
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      // Wait a bit before asking
+      setTimeout(() => Notification.requestPermission(), 10000);
+    }
+  </script>
+</body>
+</html>

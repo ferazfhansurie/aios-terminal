@@ -11,6 +11,12 @@ files:
   - resources/**/*
   - package.json
 
+extraResources:
+  - from: template
+    to: template
+    filter:
+      - "**/*"
+
 # Rebuild native modules (node-pty) for the target platform
 npmRebuild: true
 

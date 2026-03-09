@@ -1,6 +1,6 @@
 {
   "name": "aios-terminal",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "AIOS Terminal — AI Operating System Interface",
   "author": "Adletic",
   "main": "out/main/main.js",
