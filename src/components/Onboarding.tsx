@@ -1,4 +1,5 @@
 import { useAppStore } from '../stores/app-store'
+import logo from '../assets/logo.png'
 
 export default function Onboarding() {
   const setConfig = useAppStore((s) => s.setConfig)
@@ -12,36 +13,33 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="flex items-center justify-center h-screen bg-[#0a0a0c]">
-      <div className="w-full max-w-md px-6">
-        <div className="text-center mb-8">
-          <div className="text-5xl mb-4">⚡</div>
-          <h1 className="text-2xl font-bold text-neutral-100 mb-2">AIOS</h1>
+    <div className="flex items-center justify-center h-screen bg-[#0a0a0c] select-none">
+      <div className="w-full max-w-sm px-6">
+        <div className="text-center mb-10">
+          <img src={logo} alt="AIOS" className="w-20 h-20 mx-auto mb-5 drop-shadow-[0_0_30px_rgba(249,115,22,0.3)]" />
+          <h1 className="text-2xl font-bold text-neutral-100 tracking-tight mb-1">AIOS</h1>
           <p className="text-sm text-neutral-500">AI that controls your computer</p>
         </div>
 
-        <div className="space-y-4">
+        <button
+          onClick={handleStart}
+          className="w-full py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold text-sm hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg shadow-orange-500/20 active:scale-[0.98]"
+        >
+          Get started
+        </button>
+
+        <p className="text-[11px] text-neutral-600 text-center mt-4 leading-relaxed">
+          Uses your existing Claude Code authentication.<br />
+          Free tier includes 10,000 credits per day.
+        </p>
+
+        <div className="text-center mt-8">
           <button
-            onClick={handleStart}
-            className="w-full py-3 rounded-lg bg-orange-500 text-white font-medium text-sm hover:bg-orange-600 transition-colors"
+            onClick={handleOwnerLogin}
+            className="text-[11px] text-neutral-700 hover:text-orange-400 transition-colors"
           >
-            Get started
+            Owner login
           </button>
-
-          <p className="text-xs text-neutral-600 text-center">
-            Uses your existing Claude Code authentication.
-            <br />
-            Free tier: 10,000 credits/day.
-          </p>
-
-          <div className="text-center pt-4">
-            <button
-              onClick={handleOwnerLogin}
-              className="text-xs text-neutral-600 hover:text-orange-400 transition-colors"
-            >
-              Owner login
-            </button>
-          </div>
         </div>
       </div>
     </div>
