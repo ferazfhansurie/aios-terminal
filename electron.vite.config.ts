@@ -10,13 +10,13 @@ export default defineConfig({
     build: {
       lib: {
         entry: resolve(__dirname, 'electron/main.ts'),
-        formats: ['cjs'],
+        formats: ['es'],
       },
       rollupOptions: {
-        external: ['electron', 'better-sqlite3', 'keytar', 'electron-store', '@anthropic-ai/claude-code', 'path', 'os', 'fs', 'chokidar'],
+        external: ['electron', 'better-sqlite3', 'keytar', 'electron-store', '@anthropic-ai/claude-code', 'path', 'os', 'fs', 'crypto', 'child_process', 'chokidar'],
         output: {
-          format: 'cjs',
-          entryFileNames: '[name].js',
+          format: 'es',
+          entryFileNames: '[name].mjs',
         },
       },
     },

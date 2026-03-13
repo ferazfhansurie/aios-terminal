@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "AIOS — AI that controls your computer",
   "author": "Adletic",
-  "main": "out/main/main.js",
+  "main": "out/main/main.mjs",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build && electron-builder",
