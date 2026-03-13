@@ -15,6 +15,20 @@ export default function App() {
     return () => clearInterval(interval)
   }, [])
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+        e.preventDefault()
+        const id = useAppStore.getState().createNewChat()
+        useAppStore.getState().setActiveConversation(id)
+        useAppStore.getState().setView('chat')
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   // SDK message handler
   useEffect(() => {
     const aios = (window as any).aios
@@ -33,9 +47,7 @@ export default function App() {
           if (textParts) {
             store.appendAssistantContent(conversationId, textParts)
           }
-        }
 
-        if (message.type === 'assistant' && message.message?.content) {
           const toolParts = message.message.content.filter((p: any) => p.type === 'tool_use')
           for (const tool of toolParts) {
             store.addToolCall(conversationId, {
@@ -111,8 +123,14 @@ export default function App() {
           )}
         </div>
 
-        <div className="h-7 shrink-0 border-t border-white/[0.06] bg-[#0a0a0c] flex items-center justify-between px-3">
-          <span className="text-xs text-neutral-600">AIOS v0.1.0</span>
+        <div className="h-7 shrink-0 border-t border-white/[0.04] bg-[#09090b] flex items-center justify-between px-3">
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] text-neutral-700">AIOS v0.1.0</span>
+            <span className="flex items-center gap-1 text-[11px] text-neutral-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500/80" />
+              Ready
+            </span>
+          </div>
           <CreditMeter />
         </div>
       </div>

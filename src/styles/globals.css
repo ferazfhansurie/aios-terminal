@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bg-primary: #0a0a0c;
+  --bg-surface: #141416;
+  --bg-elevated: #1a1a1e;
+  --border: rgba(255, 255, 255, 0.06);
+  --accent: #f97316;
+  --accent-hover: #ea580c;
+  --text-primary: #e4e4e7;
+  --text-secondary: #a1a1aa;
+  --text-muted: #52525b;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -10,35 +22,107 @@
 
 html, body, #root {
   height: 100%;
-  background: #0a0a0c;
-  color: #e4e4e7;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* Electron window drag */
 .app-drag-region {
   -webkit-app-region: drag;
 }
-
 .no-drag {
   -webkit-app-region: no-drag;
 }
 
+/* Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.12);
 }
 
-pre code {
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 0.8rem;
+/* Code */
+pre code, code {
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+}
+
+/* Prose overrides for assistant messages */
+.aios-prose h1, .aios-prose h2, .aios-prose h3, .aios-prose h4 {
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-top: 1.25em;
+  margin-bottom: 0.5em;
+}
+.aios-prose h1 { font-size: 1.25rem; }
+.aios-prose h2 { font-size: 1.1rem; }
+.aios-prose h3 { font-size: 1rem; }
+
+.aios-prose p {
+  margin-bottom: 0.75em;
+  line-height: 1.7;
+}
+
+.aios-prose ul, .aios-prose ol {
+  margin-bottom: 0.75em;
+  padding-left: 1.5em;
+}
+
+.aios-prose li {
+  margin-bottom: 0.25em;
+  line-height: 1.6;
+}
+
+.aios-prose li::marker {
+  color: var(--text-muted);
+}
+
+.aios-prose strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.aios-prose blockquote {
+  border-left: 2px solid var(--accent);
+  padding-left: 1em;
+  color: var(--text-secondary);
+  margin: 0.75em 0;
+}
+
+.aios-prose hr {
+  border-color: var(--border);
+  margin: 1.5em 0;
+}
+
+/* Selection */
+::selection {
+  background: rgba(249, 115, 22, 0.3);
+  color: white;
+}
+
+/* Focus ring */
+:focus-visible {
+  outline: 1.5px solid rgba(249, 115, 22, 0.5);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Smooth transitions globally */
+* {
+  transition-property: color, background-color, border-color, opacity;
+  transition-timing-function: ease-out;
+  transition-duration: 0ms;
+}
+button, a, input, textarea, [class*="hover:"] {
+  transition-duration: 150ms;
 }

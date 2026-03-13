@@ -8,23 +8,24 @@ export default function CreditMeter() {
 
   if (isPro) {
     return (
-      <div className="flex items-center gap-2 text-xs text-neutral-500">
-        <span className="text-green-400">Pro</span>
-        <span>Unlimited</span>
+      <div className="flex items-center gap-1.5 text-[11px]">
+        <span className="px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-400 font-medium">Pro</span>
       </div>
     )
   }
 
   return (
-    <div className="flex items-center gap-2 text-xs">
-      <div className="w-20 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+    <div className="flex items-center gap-2 text-[11px]">
+      <div className="w-16 h-1 bg-white/[0.06] rounded-full overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all ${pct > 80 ? 'bg-red-500' : pct > 50 ? 'bg-yellow-500' : 'bg-orange-500'}`}
+          className={`h-full rounded-full transition-all duration-500 ${
+            pct > 80 ? 'bg-red-500' : pct > 50 ? 'bg-yellow-500' : 'bg-orange-500'
+          }`}
           style={{ width: `${Math.min(pct, 100)}%` }}
         />
       </div>
-      <span className="text-neutral-500">
-        {remaining.toLocaleString()} credits left
+      <span className="text-neutral-500 tabular-nums">
+        {Math.round(remaining).toLocaleString()} left
       </span>
     </div>
   )
