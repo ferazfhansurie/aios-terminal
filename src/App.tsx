@@ -3,9 +3,10 @@ import { useAppStore } from './stores/app-store'
 import ChatSidebar from './components/ChatSidebar'
 import ChatView from './components/ChatView'
 import CreditMeter from './components/CreditMeter'
+import Onboarding from './components/Onboarding'
 
 export default function App() {
-  const { view, loadConversations, loadCredits, sidebarOpen, setSidebarOpen } = useAppStore()
+  const { config, view, loadConversations, loadCredits, sidebarOpen, setSidebarOpen } = useAppStore()
 
   useEffect(() => {
     loadConversations()
@@ -77,6 +78,10 @@ export default function App() {
 
     return () => unsubs.forEach((fn) => fn())
   }, [])
+
+  if (!config.apiKey) {
+    return <Onboarding />
+  }
 
   return (
     <div className="flex h-screen bg-[#0a0a0c] text-neutral-100">
