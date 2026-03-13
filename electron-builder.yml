@@ -1,5 +1,5 @@
-appId: com.adletic.aios-terminal
-productName: AIOS Terminal
+appId: com.adletic.aios
+productName: AIOS
 copyright: Copyright © 2025 Adletic
 
 directories:
@@ -17,7 +17,7 @@ extraResources:
     filter:
       - "**/*"
 
-# Rebuild native modules (node-pty) for the target platform
+# Rebuild native modules (better-sqlite3) for the target platform
 npmRebuild: true
 
 mac:
@@ -25,13 +25,13 @@ mac:
     - target: dmg
       arch: [x64, arm64]
   icon: resources/icon.icns
-  category: public.app-category.developer-tools
+  category: public.app-category.productivity
   identity: null
   hardenedRuntime: false
   gatekeeperAssess: false
 
 dmg:
-  title: AIOS Terminal
+  title: AIOS
   contents:
     - x: 130
       y: 220

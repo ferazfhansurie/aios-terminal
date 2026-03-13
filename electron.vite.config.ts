@@ -13,7 +13,7 @@ export default defineConfig({
         formats: ['cjs'],
       },
       rollupOptions: {
-        external: ['electron', 'node-pty', 'path', 'os', 'fs', 'chokidar'],
+        external: ['electron', 'better-sqlite3', 'keytar', 'electron-store', '@anthropic-ai/claude-code', 'path', 'os', 'fs', 'chokidar'],
         output: {
           format: 'cjs',
           entryFileNames: '[name].js',
