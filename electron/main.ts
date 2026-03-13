@@ -1,8 +1,9 @@
-import { app, BrowserWindow, ipcMain, nativeImage, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, nativeImage, dialog, Menu, shell } from 'electron'
 import { join } from 'path'
-import { registerPtyHandlers, startPty, destroyPty, switchCwd } from './pty'
+import { spawn } from 'child_process'
+import { initDb, closeDb, createConversation, listConversations, updateConversation, deleteConversation, addMessage, getMessages, getCreditsUsedToday, getCreditHistory } from './db'
+import { runQuery, abortQuery, loadMcpServers } from './sdk'
 import { setupFileHandlers, destroyFileWatcher } from './files'
-import { setupScheduler, updateSchedulerCwd, destroyScheduler } from './scheduler'
 import {
   listInstances,
   getActiveInstance,
@@ -17,6 +18,8 @@ import {
 } from './instances'
 
 let mainWindow: BrowserWindow | null = null
+
+const FREE_DAILY_CREDITS = 10_000
 
 // Template directory — bundled with the app
 const TEMPLATE_DIR = app.isPackaged
@@ -49,26 +52,67 @@ function createWindow() {
   })
 
   // Register IPC handlers BEFORE loading renderer to avoid race condition.
-  // PTY spawn is deferred to ready-to-show (node-pty needs full app env).
   ensureDefaultInstance()
   const active = getActiveInstance()
-  registerPtyHandlers(mainWindow, active.path)
   setupFileHandlers(mainWindow, active.path)
-  setupScheduler(mainWindow, active.path, (cmd) => {
-    mainWindow?.webContents.send('pty:data', `\r\n\x1b[33m[scheduler]\x1b[0m Running: ${cmd}\r\n`)
-    ipcMain.emit('pty:send-command', null, cmd)
+
+  // --- SDK IPC ---
+  ipcMain.removeHandler('sdk:query')
+  ipcMain.removeHandler('sdk:abort')
+
+  ipcMain.handle('sdk:query', async (_event, opts) => {
+    const activeInst = getActiveInstance()
+    const mcpServers = loadMcpServers(activeInst.path)
+
+    // Check credits (free tier)
+    if (!opts.apiKey) {
+      const used = getCreditsUsedToday()
+      if (used >= FREE_DAILY_CREDITS) {
+        mainWindow?.webContents.send('sdk:error', {
+          conversationId: opts.conversationId,
+          error: `Daily credit limit reached (${FREE_DAILY_CREDITS.toLocaleString()} credits). Upgrade to Pro for unlimited.`,
+        })
+        mainWindow?.webContents.send('sdk:complete', { conversationId: opts.conversationId })
+        return
+      }
+    }
+
+    await runQuery(mainWindow!, {
+      prompt: opts.prompt,
+      conversationId: opts.conversationId,
+      cwd: activeInst.path,
+      sessionId: opts.sessionId,
+      maxTurns: opts.maxTurns,
+      apiKey: opts.apiKey,
+      mcpServers,
+    })
   })
 
-  if (process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
-  } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
-  }
+  ipcMain.handle('sdk:abort', () => abortQuery())
 
-  mainWindow.on('ready-to-show', () => {
-    mainWindow!.maximize()
-    startPty(mainWindow!, active.path)
-  })
+  // --- Conversation IPC ---
+  ipcMain.removeHandler('conv:create')
+  ipcMain.removeHandler('conv:list')
+  ipcMain.removeHandler('conv:update')
+  ipcMain.removeHandler('conv:delete')
+  ipcMain.removeHandler('conv:messages')
+  ipcMain.removeHandler('conv:add-message')
+
+  ipcMain.handle('conv:create', (_event, id: string, title: string) => createConversation(id, title))
+  ipcMain.handle('conv:list', (_event, limit?: number) => listConversations(limit))
+  ipcMain.handle('conv:update', (_event, id: string, updates: any) => updateConversation(id, updates))
+  ipcMain.handle('conv:delete', (_event, id: string) => deleteConversation(id))
+  ipcMain.handle('conv:messages', (_event, convId: string) => getMessages(convId))
+  ipcMain.handle('conv:add-message', (_event, convId: string, role: string, content: string, tokens?: number, toolCalls?: string) => addMessage(convId, role, content, tokens, toolCalls))
+
+  // --- Credits IPC ---
+  ipcMain.removeHandler('credits:today')
+  ipcMain.removeHandler('credits:history')
+  ipcMain.removeHandler('credits:limit')
+
+  ipcMain.handle('credits:today', () => getCreditsUsedToday())
+  ipcMain.handle('credits:history', (_event, days?: number) => getCreditHistory(days))
+  ipcMain.handle('credits:limit', () => FREE_DAILY_CREDITS)
 
   // --- Instance management IPC ---
   ipcMain.removeHandler('instances:list')
@@ -79,6 +123,11 @@ function createWindow() {
   ipcMain.removeHandler('instances:rename')
   ipcMain.removeHandler('instances:add-folder')
   ipcMain.removeHandler('app:info')
+  ipcMain.removeHandler('shell:open-path')
+  ipcMain.removeHandler('shell:show-in-folder')
+
+  ipcMain.handle('shell:open-path', (_event, filePath: string) => shell.openPath(filePath))
+  ipcMain.handle('shell:show-in-folder', (_event, filePath: string) => { shell.showItemInFolder(filePath) })
 
   ipcMain.handle('instances:list', () => listInstances())
   ipcMain.handle('instances:active', () => getActiveInstance())
@@ -87,9 +136,7 @@ function createWindow() {
     const instance = getInstanceById(id)
     if (!instance) return false
     setActiveInstanceId(id)
-    switchCwd(mainWindow!, instance.path)
     setupFileHandlers(mainWindow!, instance.path)
-    updateSchedulerCwd(instance.path)
     mainWindow!.webContents.send('instance:switched', instance)
     return true
   })
@@ -97,9 +144,7 @@ function createWindow() {
   ipcMain.handle('instances:create', (_event, name: string) => {
     const instance = createInstance(name, TEMPLATE_DIR)
     setActiveInstanceId(instance.id)
-    switchCwd(mainWindow!, instance.path)
     setupFileHandlers(mainWindow!, instance.path)
-    updateSchedulerCwd(instance.path)
     mainWindow!.webContents.send('instance:switched', instance)
     return instance
   })
@@ -108,12 +153,10 @@ function createWindow() {
     const wasActive = getActiveInstance().id === id
     const ok = deleteInstance(id)
     if (ok && wasActive) {
-      const active = getActiveInstance()
-      setActiveInstanceId(active.id)
-      switchCwd(mainWindow!, active.path)
-      setupFileHandlers(mainWindow!, active.path)
-      updateSchedulerCwd(active.path)
-      mainWindow!.webContents.send('instance:switched', active)
+      const newActive = getActiveInstance()
+      setActiveInstanceId(newActive.id)
+      setupFileHandlers(mainWindow!, newActive.path)
+      mainWindow!.webContents.send('instance:switched', newActive)
     }
     return ok
   })
@@ -136,30 +179,151 @@ function createWindow() {
     const instance = addExistingFolder(folderPath)
     if (!instance) return null
     setActiveInstanceId(instance.id)
-    switchCwd(mainWindow!, instance.path)
     setupFileHandlers(mainWindow!, instance.path)
-    updateSchedulerCwd(instance.path)
     mainWindow!.webContents.send('instance:switched', instance)
     return instance
   })
 
   ipcMain.handle('app:info', () => {
-    const active = getActiveInstance()
+    const activeInst = getActiveInstance()
     return {
-      version: '0.2.0',
-      cwd: active.path,
-      companyName: active.name,
-      instanceId: active.id,
+      version: '0.3.0',
+      cwd: activeInst.path,
+      companyName: activeInst.name,
+      instanceId: activeInst.id,
     }
+  })
+
+  if (process.env['ELECTRON_RENDERER_URL']) {
+    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+  } else {
+    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+  }
+
+  mainWindow.on('ready-to-show', () => {
+    mainWindow!.maximize()
   })
 }
 
-app.setName('AIOS Terminal')
-app.whenReady().then(createWindow)
+// --- New Window (spawns independent process, like VS Code) ---
+function openNewWindow() {
+  if (process.platform === 'darwin' && app.isPackaged) {
+    // macOS: use 'open -n' to launch a new instance of the .app bundle
+    const appPath = app.getPath('exe').replace(/\/Contents\/MacOS\/.*$/, '')
+    spawn('open', ['-n', appPath], { detached: true, stdio: 'ignore' }).unref()
+  } else {
+    // Dev mode or Windows/Linux: spawn the binary directly
+    const args = app.isPackaged ? [] : [app.getAppPath()]
+    spawn(process.execPath, args, {
+      detached: true,
+      stdio: 'ignore',
+      env: { ...process.env },
+    }).unref()
+  }
+}
+
+// --- Application menu (includes New Window: Cmd+Shift+N) ---
+function buildAppMenu() {
+  const isMac = process.platform === 'darwin'
+  const template: Electron.MenuItemConstructorOptions[] = [
+    ...(isMac
+      ? [
+          {
+            label: app.name,
+            submenu: [
+              { role: 'about' as const },
+              { type: 'separator' as const },
+              { role: 'services' as const },
+              { type: 'separator' as const },
+              { role: 'hide' as const },
+              { role: 'hideOthers' as const },
+              { role: 'unhide' as const },
+              { type: 'separator' as const },
+              { role: 'quit' as const },
+            ],
+          },
+        ]
+      : []),
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'New Window',
+          accelerator: 'CmdOrCtrl+Shift+N',
+          click: openNewWindow,
+        },
+        { type: 'separator' },
+        isMac ? { role: 'close' } : { role: 'quit' },
+      ],
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectAll' },
+      ],
+    },
+    {
+      label: 'View',
+      submenu: [
+        { role: 'reload' },
+        { role: 'forceReload' },
+        { role: 'toggleDevTools' },
+        { type: 'separator' },
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' },
+      ],
+    },
+    {
+      label: 'Window',
+      submenu: [
+        { role: 'minimize' },
+        { role: 'zoom' },
+        ...(isMac
+          ? [{ type: 'separator' as const }, { role: 'front' as const }]
+          : []),
+      ],
+    },
+  ]
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+}
+
+app.setName('AIOS')
+
+app.whenReady().then(() => {
+  buildAppMenu()
+
+  // macOS dock menu: right-click dock icon → "New Window"
+  if (process.platform === 'darwin' && app.dock) {
+    app.dock.setMenu(
+      Menu.buildFromTemplate([{ label: 'New Window', click: openNewWindow }])
+    )
+  }
+
+  initDb()
+  createWindow()
+})
+
+// macOS: re-open window when dock icon clicked and no windows exist
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow()
+  }
+})
 
 app.on('window-all-closed', () => {
-  destroyPty()
+  closeDb()
   destroyFileWatcher()
-  destroyScheduler()
-  app.quit()
+  // macOS: keep app alive so dock click can re-open (like VS Code)
+  if (process.platform !== 'darwin') {
+    app.quit()
+  }
 })
