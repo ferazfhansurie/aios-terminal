@@ -1,0 +1,4 @@
+TUNNEL_NAME=aios-terminal
+TUNNEL_ID=69b37048-cee7-492f-9911-69ee8808a26d
+CONFIG_FILE=/Users/firazfhansurie/.cloudflared/config-aios.yml
+HOSTNAME=aios.jutateknologi.com

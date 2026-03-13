@@ -17,6 +17,9 @@ extraResources:
     filter:
       - "**/*"
 
+asarUnpack:
+  - "node_modules/@anthropic-ai/claude-code/**"
+
 # Rebuild native modules (better-sqlite3) for the target platform
 npmRebuild: true
 

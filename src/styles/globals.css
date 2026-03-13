@@ -37,6 +37,11 @@ html, body, #root {
   -webkit-app-region: no-drag;
 }
 
+/* Web mode — disable drag but keep top bar visible for hamburger nav */
+html.web-mode .app-drag-region {
+  -webkit-app-region: none;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 5px;
@@ -61,26 +66,48 @@ pre code, code {
 .aios-prose h1, .aios-prose h2, .aios-prose h3, .aios-prose h4 {
   color: var(--text-primary);
   font-weight: 600;
-  margin-top: 1.25em;
-  margin-bottom: 0.5em;
+  margin-bottom: 0.4em;
 }
-.aios-prose h1 { font-size: 1.25rem; }
-.aios-prose h2 { font-size: 1.1rem; }
-.aios-prose h3 { font-size: 1rem; }
+.aios-prose h1 { font-size: 1.2rem; margin-top: 1.2em; }
+.aios-prose h2 { font-size: 1.05rem; margin-top: 1em; }
+.aios-prose h3 { font-size: 0.95rem; margin-top: 0.8em; }
+.aios-prose h4 { font-size: 0.9rem; margin-top: 0.6em; }
+
+/* Remove top margin on first element */
+.aios-prose > :first-child {
+  margin-top: 0 !important;
+}
 
 .aios-prose p {
-  margin-bottom: 0.75em;
-  line-height: 1.7;
+  margin-bottom: 0.6em;
+  line-height: 1.65;
+}
+
+/* Last paragraph: no trailing margin */
+.aios-prose > p:last-child {
+  margin-bottom: 0;
 }
 
 .aios-prose ul, .aios-prose ol {
-  margin-bottom: 0.75em;
+  margin-bottom: 0.6em;
   padding-left: 1.5em;
 }
 
+.aios-prose ul {
+  list-style-type: disc;
+}
+
+.aios-prose ol {
+  list-style-type: decimal;
+}
+
 .aios-prose li {
-  margin-bottom: 0.25em;
+  margin-bottom: 0.2em;
   line-height: 1.6;
+}
+
+.aios-prose li > p {
+  margin-bottom: 0.25em;
 }
 
 .aios-prose li::marker {
@@ -92,27 +119,110 @@ pre code, code {
   font-weight: 600;
 }
 
+.aios-prose em {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
 .aios-prose blockquote {
   border-left: 2px solid var(--accent);
   padding-left: 1em;
   color: var(--text-secondary);
-  margin: 0.75em 0;
+  margin: 0.6em 0;
 }
 
 .aios-prose hr {
   border-color: var(--border);
-  margin: 1.5em 0;
+  margin: 1.2em 0;
 }
+
+/* Nested lists */
+.aios-prose ul ul, .aios-prose ol ol, .aios-prose ul ol, .aios-prose ol ul {
+  margin-top: 0.15em;
+  margin-bottom: 0.15em;
+}
+
+/* ─── Light mode ─── */
+html.light {
+  --bg-primary: #ffffff;
+  --bg-surface: #f5f5f5;
+  --bg-elevated: #eaeaec;
+  --border: rgba(0, 0, 0, 0.08);
+  --text-primary: #18181b;
+  --text-secondary: #52525b;
+  --text-muted: #a1a1aa;
+}
+html.light body, html.light #root {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+html.light ::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.1); }
+html.light ::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.2); }
+
+/* Remap hardcoded dark backgrounds */
+html.light .bg-\[\#0a0a0c\] { background-color: #ffffff !important; }
+html.light .bg-\[\#09090b\] { background-color: #f8f8fa !important; }
+html.light .bg-\[\#0c0c0e\] { background-color: #f5f5f7 !important; }
+html.light .bg-\[\#0f0f13\] { background-color: #eeeef0 !important; }
+html.light .bg-\[\#111113\] { background-color: #e8e8ec !important; }
+html.light .bg-\[\#141416\] { background-color: #f0f0f2 !important; }
+html.light .bg-\[\#1a1a1e\] { background-color: #f5f5f7 !important; }
+html.light .bg-\[\#18181b\] { background-color: #f0f0f2 !important; }
+html.light .bg-\[\#0e0e10\] { background-color: #eeeef0 !important; }
+
+/* Remap text colors */
+html.light .text-neutral-100 { color: #18181b !important; }
+html.light .text-neutral-200 { color: #27272a !important; }
+html.light .text-neutral-300 { color: #3f3f46 !important; }
+html.light .text-neutral-400 { color: #52525b !important; }
+html.light .text-neutral-500 { color: #71717a !important; }
+html.light .text-neutral-600 { color: #a1a1aa !important; }
+html.light .text-neutral-700 { color: #d4d4d8 !important; }
+
+/* Remap borders */
+html.light [class*="border-white\/"] { border-color: rgba(0, 0, 0, 0.08) !important; }
+
+/* Remap semi-transparent white backgrounds */
+html.light .bg-white\/\[0\.02\],
+html.light .bg-white\/\[0\.03\],
+html.light .bg-white\/\[0\.04\],
+html.light .bg-white\/\[0\.05\],
+html.light .bg-white\/\[0\.06\] { background-color: rgba(0, 0, 0, 0.03) !important; }
+html.light .bg-white\/\[0\.08\],
+html.light .bg-white\/\[0\.09\],
+html.light .bg-white\/\[0\.12\] { background-color: rgba(0, 0, 0, 0.06) !important; }
+
+/* Orange accents darken slightly in light mode */
+html.light .text-orange-300 { color: #c2410c !important; }
+html.light .text-orange-400 { color: #ea580c !important; }
+html.light .bg-orange-500\/10 { background-color: rgba(249, 115, 22, 0.08) !important; }
+html.light .border-orange-500\/10 { border-color: rgba(249, 115, 22, 0.12) !important; }
+
+/* ─── Accent color utilities (driven by --accent CSS variable) ─── */
+.accent-bg { background-color: var(--accent) !important; }
+.accent-bg-10 { background-color: color-mix(in srgb, var(--accent) 10%, transparent) !important; }
+.accent-bg-15 { background-color: color-mix(in srgb, var(--accent) 15%, transparent) !important; }
+.accent-bg-20 { background-color: color-mix(in srgb, var(--accent) 20%, transparent) !important; }
+.accent-text { color: var(--accent) !important; }
+.accent-text-muted { color: color-mix(in srgb, var(--accent) 70%, transparent) !important; }
+.accent-border { border-color: var(--accent) !important; }
+.accent-border-30 { border-color: color-mix(in srgb, var(--accent) 30%, transparent) !important; }
+.accent-border-50 { border-color: color-mix(in srgb, var(--accent) 50%, transparent) !important; }
+.accent-shadow { box-shadow: 0 8px 24px -8px color-mix(in srgb, var(--accent) 25%, transparent) !important; }
+.accent-ring:focus-within { border-color: color-mix(in srgb, var(--accent) 50%, transparent) !important; }
+.accent-glow { filter: drop-shadow(0 0 20px color-mix(in srgb, var(--accent) 15%, transparent)); }
+.accent-dot { background-color: var(--accent); }
+.accent-pulse { background-color: color-mix(in srgb, var(--accent) 60%, transparent); }
 
 /* Selection */
 ::selection {
-  background: rgba(249, 115, 22, 0.3);
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
   color: white;
 }
 
 /* Focus ring */
 :focus-visible {
-  outline: 1.5px solid rgba(249, 115, 22, 0.5);
+  outline: 1.5px solid color-mix(in srgb, var(--accent) 50%, transparent);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -125,4 +235,34 @@ pre code, code {
 }
 button, a, input, textarea, [class*="hover:"] {
   transition-duration: 150ms;
+}
+
+/* ─── Mobile responsive ─── */
+@media (max-width: 767px) {
+  /* Prevent iOS bounce / overscroll */
+  html, body, #root {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Safe area for notch / home indicator */
+  .safe-area-bottom {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+
+  /* Touch targets: min 44px */
+  button, a, [role="button"] {
+    min-height: 36px;
+    min-width: 36px;
+  }
+
+  /* Don't shrink text below readable size */
+  input, textarea, select {
+    font-size: 16px !important; /* prevents iOS zoom on focus */
+  }
+}
+
+/* Web mode mobile: no drag region, safe area top */
+html.web-mode {
+  padding-top: env(safe-area-inset-top);
 }

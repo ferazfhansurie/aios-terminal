@@ -1,51 +1,16 @@
 import { ipcMain, BrowserWindow } from 'electron'
-import fs from 'fs'
-import path from 'path'
+import { listSchedules, createSchedule, updateSchedule, deleteSchedule, addScheduleRun, getScheduleRuns, getSchedule } from './db'
 
-export interface ScheduledTask {
-  id: string
-  name: string
-  command: string
-  type: 'once' | 'daily' | 'weekly' | 'interval'
-  time?: string            // HH:MM for daily/weekly/once
-  dayOfWeek?: number       // 0=Sun..6=Sat for weekly
-  date?: string            // YYYY-MM-DD for once
-  intervalMinutes?: number // for interval type
-  enabled: boolean
-  lastRun?: number
-  lastStatus?: 'success' | 'pending' | 'skipped'
-  createdAt: number
-  history: { timestamp: number; status: string }[]
-}
-
-let schedulesPath = ''
 let checkInterval: ReturnType<typeof setInterval> | null = null
 let win: BrowserWindow | null = null
 let sendCommandFn: ((cmd: string) => void) | null = null
-
-function readSchedules(): ScheduledTask[] {
-  if (!schedulesPath || !fs.existsSync(schedulesPath)) return []
-  try {
-    return JSON.parse(fs.readFileSync(schedulesPath, 'utf-8'))
-  } catch {
-    return []
-  }
-}
-
-function writeSchedules(tasks: ScheduledTask[]) {
-  if (!schedulesPath) return
-  const dir = path.dirname(schedulesPath)
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-  fs.writeFileSync(schedulesPath, JSON.stringify(tasks, null, 2), 'utf-8')
-  win?.webContents.send('schedules:changed')
-}
 
 function generateId(): string {
   return `sched_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`
 }
 
 /** Calculate next run time for a task */
-export function getNextRun(task: ScheduledTask): number | null {
+export function getNextRun(task: any): number | null {
   if (!task.enabled) return null
   const now = new Date()
 
@@ -54,7 +19,10 @@ export function getNextRun(task: ScheduledTask): number | null {
     const [h, m] = task.time.split(':').map(Number)
     const d = new Date(task.date + 'T00:00:00')
     d.setHours(h, m, 0, 0)
-    return d.getTime() > now.getTime() ? d.getTime() : null
+    const taskTime = d.getTime()
+    if (taskTime > now.getTime()) return taskTime
+    if (!task.last_run && (now.getTime() - taskTime) < 600_000) return taskTime
+    return null
   }
 
   if (task.type === 'daily') {
@@ -67,12 +35,12 @@ export function getNextRun(task: ScheduledTask): number | null {
   }
 
   if (task.type === 'weekly') {
-    if (!task.time || task.dayOfWeek === undefined) return null
+    if (!task.time || task.day_of_week === undefined || task.day_of_week === null) return null
     const [h, m] = task.time.split(':').map(Number)
     const next = new Date()
     next.setHours(h, m, 0, 0)
     const currentDay = next.getDay()
-    let daysUntil = task.dayOfWeek - currentDay
+    let daysUntil = task.day_of_week - currentDay
     if (daysUntil < 0) daysUntil += 7
     if (daysUntil === 0 && next.getTime() <= now.getTime()) daysUntil = 7
     next.setDate(next.getDate() + daysUntil)
@@ -80,82 +48,93 @@ export function getNextRun(task: ScheduledTask): number | null {
   }
 
   if (task.type === 'interval') {
-    if (!task.intervalMinutes) return null
-    const base = task.lastRun || task.createdAt
-    const next = base + task.intervalMinutes * 60 * 1000
-    return next > now.getTime() ? next : now.getTime() + 1000 // due now
+    if (!task.interval_minutes) return null
+    const base = task.last_run || task.created_at
+    const next = base + task.interval_minutes * 60 * 1000
+    return next > now.getTime() ? next : now.getTime() + 1000
   }
 
   return null
 }
 
-/** Check if a task is due to run */
-function isDue(task: ScheduledTask): boolean {
+function isDue(task: any): boolean {
   if (!task.enabled) return false
   const nextRun = getNextRun(task)
   if (!nextRun) return false
   const now = Date.now()
-  // Due if within 30 seconds of the scheduled time
-  // and hasn't run in the last 2 minutes (prevent double-fire)
-  const recentlyRan = task.lastRun && (now - task.lastRun) < 120_000
+  const recentlyRan = task.last_run && (now - task.last_run) < 120_000
   return nextRun <= now + 30_000 && !recentlyRan
 }
 
-/** Main check loop — runs every 30 seconds */
 function checkSchedules() {
-  const tasks = readSchedules()
-  let changed = false
+  try {
+    const tasks = listSchedules()
+    for (const task of tasks) {
+      if (isDue(task as any)) {
+        const startedAt = Date.now()
+        if (sendCommandFn) sendCommandFn((task as any).command)
 
-  for (const task of tasks) {
-    if (isDue(task)) {
-      // Execute the command
-      if (sendCommandFn) {
-        sendCommandFn(task.command)
+        updateSchedule((task as any).id, {
+          last_run: startedAt,
+          last_status: 'success',
+          run_count: ((task as any).run_count || 0) + 1,
+        })
+        addScheduleRun((task as any).id, 'success', undefined, startedAt)
+
+        if ((task as any).type === 'once') {
+          updateSchedule((task as any).id, { enabled: 0 })
+        }
+        broadcastScheduleChange()
       }
-      task.lastRun = Date.now()
-      task.lastStatus = 'success'
-      task.history.push({ timestamp: Date.now(), status: 'executed' })
-      // Keep only last 20 history entries
-      if (task.history.length > 20) task.history = task.history.slice(-20)
-      // Disable one-time tasks after execution
-      if (task.type === 'once') task.enabled = false
-      changed = true
     }
+  } catch (err) {
+    console.error('[Scheduler] Error in check loop:', err)
   }
+}
 
-  if (changed) writeSchedules(tasks)
+function broadcastScheduleChange() {
+  if (win && !win.isDestroyed()) {
+    win.webContents.send('schedules:changed')
+  }
+}
+
+function enrichSchedules(tasks: any[]) {
+  return tasks.map(t => ({
+    ...t,
+    enabled: !!t.enabled,
+    nextRun: getNextRun(t),
+  }))
 }
 
 export function setupScheduler(
   window: BrowserWindow,
-  cwd: string,
+  _cwd: string,
   commandSender: (cmd: string) => void
 ) {
   win = window
   sendCommandFn = commandSender
-  schedulesPath = path.join(cwd, '.claude', 'schedules.json')
 
-  // Clear old handlers
   ipcMain.removeHandler('schedules:list')
+  ipcMain.removeHandler('schedules:get')
   ipcMain.removeHandler('schedules:create')
   ipcMain.removeHandler('schedules:update')
   ipcMain.removeHandler('schedules:delete')
   ipcMain.removeHandler('schedules:toggle')
   ipcMain.removeHandler('schedules:run-now')
+  ipcMain.removeHandler('schedules:runs')
 
-  ipcMain.handle('schedules:list', () => {
-    const tasks = readSchedules()
-    // Enrich with next run times
-    return tasks.map(t => ({
-      ...t,
-      nextRun: getNextRun(t),
-    }))
+  ipcMain.handle('schedules:list', () => enrichSchedules(listSchedules()))
+
+  ipcMain.handle('schedules:get', (_event, id: string) => {
+    const task = getSchedule(id)
+    if (!task) return null
+    return { ...task, enabled: !!task.enabled, nextRun: getNextRun(task) }
   })
 
-  ipcMain.handle('schedules:create', (_event, data: Partial<ScheduledTask>) => {
-    const tasks = readSchedules()
-    const task: ScheduledTask = {
-      id: generateId(),
+  ipcMain.handle('schedules:create', (_event, data: any) => {
+    const id = generateId()
+    const task = createSchedule({
+      id,
       name: data.name || 'Untitled',
       command: data.command || '',
       type: data.type || 'daily',
@@ -163,59 +142,67 @@ export function setupScheduler(
       dayOfWeek: data.dayOfWeek,
       date: data.date,
       intervalMinutes: data.intervalMinutes,
-      enabled: true,
-      createdAt: Date.now(),
-      history: [],
-    }
-    tasks.push(task)
-    writeSchedules(tasks)
-    return { ...task, nextRun: getNextRun(task) }
+    })
+    broadcastScheduleChange()
+    return task ? { ...task, enabled: !!task.enabled, nextRun: getNextRun(task) } : null
   })
 
-  ipcMain.handle('schedules:update', (_event, id: string, data: Partial<ScheduledTask>) => {
-    const tasks = readSchedules()
-    const idx = tasks.findIndex(t => t.id === id)
-    if (idx === -1) return null
-    tasks[idx] = { ...tasks[idx], ...data, id } // preserve id
-    writeSchedules(tasks)
-    return { ...tasks[idx], nextRun: getNextRun(tasks[idx]) }
+  ipcMain.handle('schedules:update', (_event, id: string, data: any) => {
+    const mapped: Record<string, any> = {}
+    if ('name' in data) mapped.name = data.name
+    if ('command' in data) mapped.command = data.command
+    if ('type' in data) mapped.type = data.type
+    if ('time' in data) mapped.time = data.time
+    if ('dayOfWeek' in data) mapped.day_of_week = data.dayOfWeek
+    if ('date' in data) mapped.date = data.date
+    if ('intervalMinutes' in data) mapped.interval_minutes = data.intervalMinutes
+    if ('enabled' in data) mapped.enabled = data.enabled ? 1 : 0
+    const task = updateSchedule(id, mapped)
+    broadcastScheduleChange()
+    return task ? { ...task, enabled: !!task.enabled, nextRun: getNextRun(task) } : null
   })
 
   ipcMain.handle('schedules:delete', (_event, id: string) => {
-    const tasks = readSchedules().filter(t => t.id !== id)
-    writeSchedules(tasks)
+    deleteSchedule(id)
+    broadcastScheduleChange()
     return true
   })
 
   ipcMain.handle('schedules:toggle', (_event, id: string) => {
-    const tasks = readSchedules()
-    const task = tasks.find(t => t.id === id)
+    const task = getSchedule(id)
     if (!task) return false
-    task.enabled = !task.enabled
-    writeSchedules(tasks)
-    return task.enabled
+    const newEnabled = task.enabled ? 0 : 1
+    updateSchedule(id, { enabled: newEnabled })
+    broadcastScheduleChange()
+    return !!newEnabled
   })
 
   ipcMain.handle('schedules:run-now', (_event, id: string) => {
-    const tasks = readSchedules()
-    const task = tasks.find(t => t.id === id)
+    const task = getSchedule(id)
     if (!task || !sendCommandFn) return false
     sendCommandFn(task.command)
-    task.lastRun = Date.now()
-    task.lastStatus = 'success'
-    task.history.push({ timestamp: Date.now(), status: 'manual' })
-    if (task.history.length > 20) task.history = task.history.slice(-20)
-    writeSchedules(tasks)
+    const startedAt = Date.now()
+    updateSchedule(id, {
+      last_run: startedAt,
+      last_status: 'success',
+      run_count: (task.run_count || 0) + 1,
+    })
+    addScheduleRun(id, 'success', 'Manual trigger', startedAt)
+    broadcastScheduleChange()
     return true
   })
 
-  // Start the check loop
+  ipcMain.handle('schedules:runs', (_event, id: string, limit?: number) => {
+    return getScheduleRuns(id, limit)
+  })
+
   if (checkInterval) clearInterval(checkInterval)
+  setTimeout(checkSchedules, 2000)
   checkInterval = setInterval(checkSchedules, 30_000)
 }
 
-export function updateSchedulerCwd(cwd: string) {
-  schedulesPath = path.join(cwd, '.claude', 'schedules.json')
+export function updateSchedulerCwd(_cwd: string) {
+  // No-op — schedules are in SQLite, not per-instance JSON
 }
 
 export function destroyScheduler() {

@@ -128,116 +128,11 @@
 <body class="h-full bg-[#0a0a0a] text-neutral-100 overflow-hidden">
   <noscript><div>AIOS requires JavaScript.</div></noscript>
 
-  <div id="app" class="flex h-full" style="height:100dvh;">
+  <div id="app-container"><div id="app" class="flex h-full" style="height:100dvh;">
 
-    <!-- ═══ SIDEBAR ═══ -->
-    <aside id="sidebar" class="hidden md:flex w-52 border-r border-neutral-800/40 bg-[#0a0a0a] flex-col shrink-0 z-30">
-      <!-- Logo — compact horizontal -->
-      <div class="px-3 pt-7 pb-2.5 border-b border-neutral-800/50 flex items-center gap-2.5">
-        <div class="relative group cursor-default shrink-0">
-          <div class="absolute inset-0 rounded-xl bg-orange-500/10 blur-lg group-hover:bg-orange-500/20 transition-all duration-500"></div>
-          <img src="logo.png" alt="AIOS" class="relative w-8 h-8 rounded-lg shadow-lg shadow-black/30" onerror="this.style.display='none'">
-        </div>
-        <div class="min-w-0">
-          <h1 class="text-[11px] font-bold tracking-[0.2em] text-orange-400 uppercase leading-tight">AIOS</h1>
-          <p class="text-[8px] text-neutral-700 tracking-[0.15em] uppercase">Terminal</p>
-        </div>
-      </div>
-
-      <!-- Quick Actions -->
-      <div class="px-3 py-2 border-b border-neutral-800/40">
-        <div class="text-[9px] font-semibold uppercase tracking-[0.15em] text-neutral-700 mb-2 px-1">Quick Actions</div>
-        <div class="grid grid-cols-2 gap-1" id="quick-actions-desktop"></div>
-      </div>
-
-      <!-- Sidebar sections -->
-      <div class="flex-1 overflow-y-auto">
-        <!-- Sessions -->
-        <div class="border-b border-neutral-800/30">
-          <button onclick="toggleSection('sessions')" class="w-full flex items-center justify-between px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.15em] text-neutral-600 hover:text-neutral-400 transition-colors">
-            <span>Sessions</span>
-            <span id="sessions-chevron" class="text-neutral-700 text-[10px]">▸</span>
-          </button>
-          <div id="sessions-content" style="display:none" class="px-2 pb-2">
-            <button onclick="createNewTab()" class="w-full text-left px-3 py-1.5 rounded-md text-xs text-orange-500/60 hover:bg-orange-500/[0.06] hover:text-orange-400 border border-transparent hover:border-orange-500/15 transition-all flex items-center gap-2 group">
-              <span class="text-orange-500/50 group-hover:text-orange-400 text-sm leading-none">+</span>
-              <span class="text-[11px]">New session</span>
-            </button>
-            <div id="session-list" class="space-y-0.5 mt-0.5"></div>
-          </div>
-        </div>
-
-        <!-- History -->
-        <div class="border-b border-neutral-800/30">
-          <button onclick="toggleSection('history')" class="w-full flex items-center justify-between px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.15em] text-neutral-600 hover:text-neutral-400 transition-colors">
-            <span>History</span>
-            <span id="history-chevron" class="text-neutral-700 text-[10px]">▸</span>
-          </button>
-          <div id="history-content" style="display:none" class="px-2 pb-2">
-            <div id="history-list" class="space-y-0.5 max-h-48 overflow-y-auto">
-              <div class="text-[10px] text-neutral-700 px-3 py-1">Loading…</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Commands -->
-        <div class="border-b border-neutral-800/30">
-          <button onclick="toggleSection('commands')" class="w-full flex items-center justify-between px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.15em] text-neutral-600 hover:text-neutral-400 transition-colors">
-            <span>Commands</span>
-            <span id="commands-chevron" class="text-neutral-700 text-[10px]">▸</span>
-          </button>
-          <div id="commands-content" style="display:none" class="px-2 pb-2">
-            <div id="commands-list" class="space-y-0.5">
-              <div class="text-[10px] text-neutral-700 px-3 py-1">Loading…</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Schedule -->
-        <div class="border-b border-neutral-800/30">
-          <button onclick="toggleSection('schedule')" class="w-full flex items-center justify-between px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.15em] text-neutral-600 hover:text-neutral-400 transition-colors">
-            <span>Schedule</span>
-            <span id="schedule-chevron" class="text-neutral-700 text-[10px]">▸</span>
-          </button>
-          <div id="schedule-content" style="display:none" class="px-2 pb-2">
-            <div id="schedule-list" class="space-y-0.5"></div>
-          </div>
-        </div>
-
-        <!-- Files -->
-        <div class="border-b border-neutral-800/30">
-          <button onclick="toggleSection('files')" class="w-full flex items-center justify-between px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.15em] text-neutral-600 hover:text-neutral-400 transition-colors">
-            <span>Files</span>
-            <span id="files-chevron" class="text-neutral-700 text-[10px]">▸</span>
-          </button>
-          <div id="files-content" style="display:none" class="px-2 pb-2">
-            <div id="files-breadcrumb" class="px-2 mb-1"></div>
-            <div id="files-list" class="space-y-0 max-h-64 overflow-y-auto">
-              <div class="text-[10px] text-neutral-700 px-3 py-1">Loading…</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Connection -->
-        <div class="border-b border-neutral-800/30">
-          <button onclick="toggleSection('connection')" class="w-full flex items-center justify-between px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.15em] text-neutral-600 hover:text-neutral-400 transition-colors">
-            <span>Connection</span>
-            <span id="connection-chevron" class="text-neutral-700 text-[10px]">▸</span>
-          </button>
-          <div id="connection-content" style="display:none" class="px-3 pb-3 space-y-2">
-            <div class="flex items-center gap-2">
-              <span id="sb-status-dot" class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-              <span id="sb-status-text" class="text-[11px] text-neutral-500">Offline</span>
-            </div>
-            <div class="text-[10px] text-neutral-700 term-font truncate" id="sb-cwd" title=""></div>
-          </div>
-        </div>
-      </div>
-    </aside>
-
-    <!-- Mobile sidebar overlay -->
-    <div id="sidebar-overlay" class="sidebar-overlay hidden fixed inset-0 bg-black/60 z-20 md:hidden" onclick="closeSidebar()"></div>
-    <aside id="sidebar-mobile" class="sidebar-drawer fixed top-0 left-0 bottom-0 w-64 bg-[#0a0a0a] border-r border-neutral-800/40 z-30 md:hidden flex flex-col" style="transform:translateX(-100%)">
+    <!-- ═══ SIDEBAR (drawer, all screen sizes) ═══ -->
+    <div id="sidebar-overlay" class="sidebar-overlay hidden fixed inset-0 bg-black/60 z-20" onclick="closeSidebar()"></div>
+    <aside id="sidebar-mobile" class="sidebar-drawer fixed top-0 left-0 bottom-0 w-64 bg-[#0a0a0a] border-r border-neutral-800/40 z-30 flex flex-col" style="transform:translateX(-100%)">
       <!-- Logo (mobile) -->
       <div class="px-3 pt-5 pb-2.5 border-b border-neutral-800/50 flex items-center gap-2.5">
         <div class="relative shrink-0">
@@ -256,7 +151,7 @@
         <div class="grid grid-cols-2 gap-1" id="quick-actions-mobile"></div>
       </div>
 
-      <!-- Mobile sidebar sections -->
+      <!-- Sidebar sections -->
       <div class="flex-1 overflow-y-auto">
         <div class="border-b border-neutral-800/30 px-2 py-2">
           <button onclick="createNewTab();closeSidebar()" class="w-full text-left px-3 py-1.5 rounded-md text-xs text-orange-500/60 hover:bg-orange-500/[0.06] hover:text-orange-400 transition-all flex items-center gap-2 group">
@@ -265,7 +160,31 @@
           </button>
         </div>
 
-        <!-- Commands (mobile) -->
+        <!-- Sessions -->
+        <div class="border-b border-neutral-800/30">
+          <button onclick="toggleSection('sessions')" class="w-full flex items-center justify-between px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.15em] text-neutral-600 hover:text-neutral-400 transition-colors">
+            <span>Sessions</span>
+            <span id="sessions-chevron" class="text-neutral-700 text-[10px]">▸</span>
+          </button>
+          <div id="sessions-content" style="display:none" class="px-2 pb-2">
+            <div id="session-list" class="space-y-0.5"></div>
+          </div>
+        </div>
+
+        <!-- History -->
+        <div class="border-b border-neutral-800/30">
+          <button onclick="toggleSection('history')" class="w-full flex items-center justify-between px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.15em] text-neutral-600 hover:text-neutral-400 transition-colors">
+            <span>History</span>
+            <span id="history-chevron" class="text-neutral-700 text-[10px]">▸</span>
+          </button>
+          <div id="history-content" style="display:none" class="px-2 pb-2">
+            <div id="history-list" class="space-y-0.5 max-h-48 overflow-y-auto">
+              <div class="text-[10px] text-neutral-700 px-3 py-1">Loading…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Commands -->
         <div class="border-b border-neutral-800/30">
           <button onclick="toggleSection('m-commands')" class="w-full flex items-center justify-between px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.15em] text-neutral-600 hover:text-neutral-400 transition-colors">
             <span>Commands</span>
@@ -278,7 +197,18 @@
           </div>
         </div>
 
-        <!-- Files (mobile) -->
+        <!-- Schedule -->
+        <div class="border-b border-neutral-800/30">
+          <button onclick="toggleSection('schedule')" class="w-full flex items-center justify-between px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.15em] text-neutral-600 hover:text-neutral-400 transition-colors">
+            <span>Schedule</span>
+            <span id="schedule-chevron" class="text-neutral-700 text-[10px]">▸</span>
+          </button>
+          <div id="schedule-content" style="display:none" class="px-2 pb-2">
+            <div id="schedule-list" class="space-y-0.5"></div>
+          </div>
+        </div>
+
+        <!-- Files -->
         <div class="border-b border-neutral-800/30">
           <button onclick="toggleSection('m-files')" class="w-full flex items-center justify-between px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.15em] text-neutral-600 hover:text-neutral-400 transition-colors">
             <span>Files</span>
@@ -292,6 +222,7 @@
           </div>
         </div>
 
+        <!-- Connection -->
         <div class="px-3 py-3">
           <div class="flex items-center gap-2 mb-2">
             <span id="sb-m-status-dot" class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
@@ -303,19 +234,19 @@
     </aside>
 
     <!-- ═══ MAIN AREA ═══ -->
-    <div class="flex-1 flex flex-col min-w-0">
+    <div class="flex-1 flex flex-col min-w-0 relative">
 
       <!-- Tab bar -->
       <div id="tab-bar" class="h-8 border-b border-neutral-800/40 flex items-center shrink-0 bg-[#0a0a0a]">
-        <!-- Mobile hamburger -->
-        <button id="btn-menu" class="md:hidden shrink-0 w-8 h-8 flex items-center justify-center text-neutral-600 hover:text-neutral-400 transition-colors" onclick="openSidebar()" aria-label="Open menu">
+        <!-- Menu -->
+        <button id="btn-menu" class="shrink-0 w-8 h-8 flex items-center justify-center text-neutral-600 hover:text-neutral-400 transition-colors" onclick="openSidebar()" aria-label="Open menu">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
         <div id="tab-container" class="flex items-center min-w-0 overflow-x-auto"></div>
         <button onclick="createNewTab()" class="shrink-0 w-7 h-8 flex items-center justify-center text-neutral-700 hover:text-orange-400 hover:bg-neutral-800/60 transition-colors text-sm" title="New session">+</button>
         <div class="flex-1"></div>
-        <!-- Status (mobile only) -->
-        <div class="flex items-center gap-1.5 md:hidden px-2">
+        <!-- Status -->
+        <div class="flex items-center gap-1.5 px-2">
           <div id="hdr-status-dot" class="w-1.5 h-1.5 rounded-full bg-red-500"></div>
           <span id="hdr-status-text" class="text-[10px] text-neutral-500">Offline</span>
         </div>
@@ -338,6 +269,11 @@
           <div id="cwd-welcome" class="text-neutral-700 text-[10px] mt-4 term-font truncate max-w-full px-8"></div>
         </div>
       </main>
+
+      <!-- ═══ SCROLL TO BOTTOM ═══ -->
+      <button id="scroll-to-bottom" class="hidden absolute bottom-20 right-4 z-20 w-8 h-8 rounded-full bg-neutral-800 border border-neutral-700 text-neutral-400 hover:text-orange-400 hover:border-orange-500/40 shadow-lg shadow-black/30 flex items-center justify-center transition-all" onclick="userScrolled=false;messagesEl.scrollTo({top:messagesEl.scrollHeight,behavior:'smooth'});document.getElementById('scroll-to-bottom').classList.add('hidden')" title="Scroll to bottom">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
 
       <!-- ═══ INPUT ═══ -->
       <div class="input-area border-t border-neutral-800/40 px-4 py-2.5 shrink-0">
@@ -423,6 +359,7 @@
         <div class="flex justify-between py-1.5"><span class="text-neutral-400">Shortcuts help</span><kbd class="text-neutral-600 term-font text-[11px]">⌘?</kbd></div>
       </div>
     </div>
+  </div>
   </div>
 
   <script>
@@ -529,16 +466,84 @@
     const originalTitle = document.title;
 
     // ═══ AUTH ═══
-    const TOKEN = (() => {
-      const t = new URLSearchParams(location.search).get('token') || sessionStorage.getItem('aios_token') || '';
+    let TOKEN = (() => {
+      const t = new URLSearchParams(location.search).get('token') || localStorage.getItem('aios_token') || '';
       if (t) {
-        sessionStorage.setItem('aios_token', t);
+        localStorage.setItem('aios_token', t);
         const clean = new URL(location.href);
         clean.searchParams.delete('token');
         history.replaceState(null, '', clean.pathname + (clean.search || ''));
       }
       return t;
     })();
+
+    // Login screen
+    async function showLogin(message) {
+      document.getElementById('app-container').style.display = 'none';
+      let loginEl = document.getElementById('login-screen');
+      if (!loginEl) {
+        loginEl = document.createElement('div');
+        loginEl.id = 'login-screen';
+        loginEl.className = 'fixed inset-0 bg-surface-950 flex items-center justify-center z-[9999]';
+        loginEl.innerHTML = `
+          <div class="w-full max-w-xs px-6">
+            <div class="flex flex-col items-center mb-8">
+              <img src="logo.png" alt="AIOS" class="w-16 h-16 rounded-xl mb-4" onerror="this.outerHTML='<div class=\\'w-16 h-16 rounded-xl bg-orange-500 flex items-center justify-center mb-4\\'><span class=\\'text-white font-bold text-2xl\\'>A</span></div>'">
+              <div class="text-[10px] font-bold tracking-[0.2em] text-orange-400 uppercase">AIOS Terminal</div>
+            </div>
+            <div id="login-error" class="text-red-400 text-xs text-center mb-3 hidden"></div>
+            <input id="login-password" type="password" placeholder="Password" autocomplete="current-password"
+              class="w-full px-4 py-3 rounded-xl bg-surface-900 border border-neutral-800 text-white text-sm focus:outline-none focus:border-orange-500/50 mb-3" />
+            <button id="login-btn"
+              class="w-full py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium transition-colors">
+              Login
+            </button>
+          </div>
+        `;
+        document.body.appendChild(loginEl);
+
+        const pwInput = document.getElementById('login-password');
+        const loginBtn = document.getElementById('login-btn');
+
+        async function doLogin() {
+          const pw = pwInput.value.trim();
+          if (!pw) return;
+          loginBtn.textContent = '...';
+          loginBtn.disabled = true;
+          try {
+            const res = await fetch('/api/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ password: pw }),
+            });
+            const data = await res.json();
+            if (res.ok && data.token) {
+              TOKEN = data.token;
+              localStorage.setItem('aios_token', TOKEN);
+              loginEl.remove();
+              document.getElementById('app-container').style.display = '';
+              connect();
+            } else {
+              document.getElementById('login-error').textContent = data.error || 'Wrong password';
+              document.getElementById('login-error').classList.remove('hidden');
+            }
+          } catch {
+            document.getElementById('login-error').textContent = 'Connection failed';
+            document.getElementById('login-error').classList.remove('hidden');
+          }
+          loginBtn.textContent = 'Login';
+          loginBtn.disabled = false;
+        }
+
+        loginBtn.addEventListener('click', doLogin);
+        pwInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
+        setTimeout(() => pwInput.focus(), 100);
+      }
+      if (message) {
+        document.getElementById('login-error').textContent = message;
+        document.getElementById('login-error').classList.remove('hidden');
+      }
+    }
 
     // ═══ QUICK ACTIONS ═══
     const QUICK_ACTIONS = [
@@ -593,14 +598,17 @@
 
     // ═══ SCROLL ═══
     let userScrolled = false;
+    const scrollBtn = document.getElementById('scroll-to-bottom');
     messagesEl.addEventListener('scroll', () => {
       const {scrollTop,scrollHeight,clientHeight} = messagesEl;
       userScrolled = scrollHeight - scrollTop - clientHeight > 80;
+      if (scrollBtn) { if (userScrolled) scrollBtn.classList.remove('hidden'); else scrollBtn.classList.add('hidden'); }
     });
     function scrollBottom() { if (userScrolled) return; requestAnimationFrame(() => { messagesEl.scrollTop = messagesEl.scrollHeight; }); }
+    function forceScrollBottom() { userScrolled = false; if (scrollBtn) scrollBtn.classList.add('hidden'); requestAnimationFrame(() => { messagesEl.scrollTop = messagesEl.scrollHeight; }); }
 
     // ═══ SIDEBAR ═══
-    const sectionState = { sessions: false, history: false, commands: false, files: false, connection: false, schedule: false, 'm-commands': false, 'm-files': false };
+    const sectionState = { sessions: false, history: false, schedule: false, 'm-commands': false, 'm-files': false };
     function toggleSection(id) {
       sectionState[id] = !sectionState[id];
       const content = document.getElementById(id + '-content');
@@ -632,10 +640,8 @@
       $('#hdr-status-dot').className = dotCls;
       $('#hdr-status-text').textContent = text;
 
-      $('#sb-status-dot').className = dotCls;
-      $('#sb-status-text').textContent = text;
-      $('#sb-m-status-dot').className = dotCls;
-      $('#sb-m-status-text').textContent = text;
+      const sbmDot = $('#sb-m-status-dot'); if (sbmDot) sbmDot.className = dotCls;
+      const sbmText = $('#sb-m-status-text'); if (sbmText) sbmText.textContent = text;
 
       if (color === 'yellow') { $('#bar-dot').classList.add('dot-pulse'); $('#hdr-status-dot').classList.add('dot-pulse'); }
       else { $('#bar-dot').classList.remove('dot-pulse'); $('#hdr-status-dot').classList.remove('dot-pulse'); }
@@ -645,9 +651,7 @@
       const short = cwd.split('/').length > 3 ? '…/' + cwd.split('/').slice(-2).join('/') : cwd;
       $('#bar-cwd').textContent = short;
       $('#bar-cwd').title = cwd;
-      $('#sb-cwd').textContent = cwd;
-      $('#sb-cwd').title = cwd;
-      $('#sb-m-cwd').textContent = cwd;
+      const sbmCwd = $('#sb-m-cwd'); if (sbmCwd) { sbmCwd.textContent = cwd; }
       $('#cwd-welcome').textContent = cwd;
     }
 
@@ -667,7 +671,7 @@
     let reconnectAttempts = 0;
 
     function connect() {
-      if (!TOKEN) { setAllStatus('No token', 'red'); addSystemMessage('Add ?token=YOUR_TOKEN to the URL'); return; }
+      if (!TOKEN) { showLogin(); return; }
       if (S.ws && S.ws.readyState <= 1) return;
       setAllStatus('Connecting…', 'yellow');
       const proto = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -692,8 +696,15 @@
           }
         }
       };
-      ws.onclose = () => {
+      ws.onclose = (ev) => {
         S.ws = null;
+        if (ev.code === 4001) {
+          // Auth failed — token expired or invalid, show login
+          localStorage.removeItem('aios_token');
+          TOKEN = '';
+          showLogin('Session expired. Please login again.');
+          return;
+        }
         reconnectAttempts++;
         if (S.isProcessing) setProcessing(false);
         reconnectBar.classList.remove('hidden');
@@ -965,6 +976,7 @@
       addUserMessage(text);
       autoNameTab(text);
       inputEl.value = ''; inputEl.style.height = 'auto';
+      forceScrollBottom();
       setProcessing(true);
       showThinking();
       const tab = getActiveTab();
@@ -1028,7 +1040,6 @@
             </button>
           `).join('');
         };
-        render(document.getElementById('commands-list'), false);
         render(document.getElementById('m-commands-list'), true);
       } catch {}
     }
@@ -1074,7 +1085,6 @@
             </button>`;
           }).join('');
         };
-        renderList(document.getElementById('files-list'), document.getElementById('files-breadcrumb'), false);
         renderList(document.getElementById('m-files-list'), document.getElementById('m-files-breadcrumb'), true);
       } catch {}
     }
@@ -1571,7 +1581,6 @@
     renderTabs();
 
     // Render quick actions
-    renderQuickActions('quick-actions-desktop');
     renderQuickActions('quick-actions-mobile');
 
     connect();

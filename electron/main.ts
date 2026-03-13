@@ -1,9 +1,12 @@
-import { app, BrowserWindow, ipcMain, nativeImage, dialog, Menu, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, nativeImage, dialog, Menu, shell, clipboard } from 'electron'
 import { join } from 'path'
 import { spawn } from 'child_process'
-import { initDb, closeDb, createConversation, listConversations, updateConversation, deleteConversation, addMessage, getMessages, getCreditsUsedToday, getCreditHistory } from './db'
+import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs'
+import { initDb, closeDb, createConversation, listConversations, updateConversation, deleteConversation, addMessage, getMessages, getCreditsUsedToday, getCreditHistory, registerUser, loginUser, getUserTier, setUserTier } from './db'
 import { runQuery, abortQuery, loadMcpServers } from './sdk'
 import { setupFileHandlers, destroyFileWatcher } from './files'
+import { setupScheduler, destroyScheduler, updateSchedulerCwd } from './scheduler'
+import { setupWhatsApp, destroyWhatsApp } from './whatsapp'
 import {
   listInstances,
   getActiveInstance,
@@ -19,7 +22,29 @@ import {
 
 let mainWindow: BrowserWindow | null = null
 
-const FREE_DAILY_CREDITS = 10_000
+const FREE_DAILY_CREDITS = 500
+
+// Fix PATH for packaged app — Electron doesn't inherit shell PATH
+if (app.isPackaged) {
+  try {
+    const { execSync } = require('child_process')
+    const shell = process.env.SHELL || '/bin/zsh'
+    const shellPath = execSync(`${shell} -ilc 'echo $PATH'`, { encoding: 'utf-8', timeout: 5000 }).trim()
+    if (shellPath) process.env.PATH = shellPath
+  } catch {
+    // Fallback to common paths
+    const extraPaths = [
+      '/usr/local/bin',
+      '/opt/homebrew/bin',
+      `${process.env.HOME}/.nvm/versions/node/current/bin`,
+      `${process.env.HOME}/.volta/bin`,
+      '/usr/bin',
+      '/bin',
+    ]
+    const currentPath = process.env.PATH || ''
+    process.env.PATH = [...extraPaths, currentPath].join(':')
+  }
+}
 
 // Template directory — bundled with the app
 const TEMPLATE_DIR = app.isPackaged
@@ -51,22 +76,41 @@ function createWindow() {
     },
   })
 
+  // Open DevTools with Cmd+Shift+I (even in production)
+  mainWindow.webContents.on('before-input-event', (_event, input) => {
+    if ((input.meta || input.control) && input.shift && input.key === 'I') {
+      mainWindow?.webContents.toggleDevTools()
+    }
+  })
+
   // Register IPC handlers BEFORE loading renderer to avoid race condition.
   ensureDefaultInstance()
   const active = getActiveInstance()
   setupFileHandlers(mainWindow, active.path)
+
+  // Scheduler — execute scheduled commands via SDK
+  const schedulerCommandSender = (command: string) => {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    // Send to renderer so it creates a conversation and runs the query normally
+    mainWindow.webContents.send('schedule:execute', { command })
+  }
+  setupScheduler(mainWindow, active.path, schedulerCommandSender)
 
   // --- SDK IPC ---
   ipcMain.removeHandler('sdk:query')
   ipcMain.removeHandler('sdk:abort')
 
   ipcMain.handle('sdk:query', async (_event, opts) => {
+    console.log('[MAIN] sdk:query received:', { apiKey: opts.apiKey?.slice(0, 20), convId: opts.conversationId?.slice(0, 8), prompt: opts.prompt?.slice(0, 60) })
     const activeInst = getActiveInstance()
+    console.log('[MAIN] activeInst:', activeInst.name, activeInst.path)
     const mcpServers = loadMcpServers(activeInst.path)
 
     // Check credits (free tier only — owner and pro skip)
     const isOwner = opts.apiKey === '__owner__'
-    if (!isOwner) {
+    const isPro = opts.apiKey?.startsWith('user:') && getUserTier(opts.apiKey.replace('user:', '')) === 'pro'
+    console.log('[MAIN] isOwner:', isOwner, 'isPro:', isPro)
+    if (!isOwner && !isPro) {
       const used = getCreditsUsedToday()
       if (used >= FREE_DAILY_CREDITS) {
         mainWindow?.webContents.send('sdk:error', {
@@ -115,6 +159,192 @@ function createWindow() {
   ipcMain.handle('credits:history', (_event, days?: number) => getCreditHistory(days))
   ipcMain.handle('credits:limit', () => FREE_DAILY_CREDITS)
 
+  // --- MCP Servers IPC ---
+  ipcMain.removeHandler('mcp:list')
+  ipcMain.removeHandler('mcp:save')
+
+  ipcMain.handle('mcp:list', () => {
+    const activeInst = getActiveInstance()
+    const mcpPath = join(activeInst.path, '.mcp.json')
+    if (!existsSync(mcpPath)) return {}
+    try {
+      const config = JSON.parse(readFileSync(mcpPath, 'utf-8'))
+      return config.mcpServers || {}
+    } catch {
+      return {}
+    }
+  })
+
+  ipcMain.handle('mcp:save', (_event, servers: Record<string, any>) => {
+    const activeInst = getActiveInstance()
+    const mcpPath = join(activeInst.path, '.mcp.json')
+    const config = { mcpServers: servers }
+    writeFileSync(mcpPath, JSON.stringify(config, null, 2))
+    return true
+  })
+
+  // --- WhatsApp (native WWebJS) ---
+  setupWhatsApp(mainWindow)
+
+  // --- Auth IPC ---
+  ipcMain.removeHandler('auth:register')
+  ipcMain.removeHandler('auth:login')
+
+  ipcMain.handle('auth:register', (_event, data: { email: string; password: string; name: string }) => {
+    return registerUser(data.email, data.password, data.name)
+  })
+
+  ipcMain.handle('auth:login', (_event, data: { email: string; password: string }) => {
+    return loginUser(data.email, data.password)
+  })
+
+  // --- Setup / Onboarding IPC ---
+  ipcMain.removeHandler('setup:save')
+  ipcMain.removeHandler('setup:status')
+  ipcMain.removeHandler('auth:set-tier')
+
+  ipcMain.handle('setup:save', (_event, data: any) => {
+    const activeInst = getActiveInstance()
+    const ctxDir = join(activeInst.path, '.claude', 'context')
+    mkdirSync(ctxDir, { recursive: true })
+
+    // Generate personal-info.md
+    const personalInfo = `# Team Member
+
+- **Name:** ${data.name || 'Not set'}
+- **Role:** ${data.role || 'Not set'}
+- **Business:** ${data.businessName || 'Not set'}
+- **Onboarded:** ${new Date().toISOString().split('T')[0]}
+`
+    writeFileSync(join(ctxDir, 'personal-info.md'), personalInfo, 'utf-8')
+
+    // Generate business-info.md
+    let bizInfo = `# ${data.businessName || 'Business'}\n\n`
+    bizInfo += `## Overview\n${data.businessDescription || 'Not set'}\n\n`
+    bizInfo += `## Market\n${data.market || 'Not set'}\n\n`
+    bizInfo += `## Industry\n${data.industry || 'Not set'}\n\n`
+    bizInfo += `## Currency\n${data.currency || 'RM'}\n\n`
+
+    if (data.products?.length) {
+      bizInfo += `## Products & Services\n`
+      for (const p of data.products) {
+        bizInfo += `- **${p.name}** — ${data.currency || 'RM'}${p.price}${p.description ? ` — ${p.description}` : ''}\n`
+      }
+      bizInfo += '\n'
+    }
+
+    if (data.team?.length) {
+      bizInfo += `## Team\n`
+      for (const t of data.team) {
+        bizInfo += `- **${t.name}** — ${t.role}\n`
+      }
+      bizInfo += '\n'
+    }
+
+    if (data.clients?.length) {
+      bizInfo += `## Clients\n`
+      for (const c of data.clients) {
+        bizInfo += `- **${c.name}** — ${data.currency || 'RM'}${c.revenue}/mo (${c.status})\n`
+      }
+      bizInfo += '\n'
+    }
+
+    if (data.tools?.length) {
+      bizInfo += `## Tools & Integrations\n`
+      for (const tool of data.tools) {
+        bizInfo += `- ${tool}\n`
+      }
+      bizInfo += '\n'
+    }
+
+    writeFileSync(join(ctxDir, 'business-info.md'), bizInfo, 'utf-8')
+
+    // Generate current-data.md
+    const currentData = `# Current Data
+
+Last updated: ${new Date().toISOString().split('T')[0]}
+
+## Metrics
+- Revenue: Not tracked yet
+- Expenses: Not tracked yet
+
+## Recent Activity
+- AIOS setup completed
+`
+    writeFileSync(join(ctxDir, 'current-data.md'), currentData, 'utf-8')
+
+    // Generate customized CLAUDE.md
+    const claudeMd = `# AIOS — AI Operating System
+
+You are AIOS, an AI co-founder for ${data.businessName || 'this business'}.
+
+## Identity
+- You work with ${data.name || 'the team'}${data.role ? ` (${data.role})` : ''}.
+- Talk like a sharp co-founder, not a help desk. Short, direct, opinionated.
+- Take action first. If asked to check something, do it immediately.
+- NEVER list capabilities. Just do things.
+
+## How This Works
+You ARE the interface. No dashboard needed. Just conversation + tools.
+- Context: \`.claude/context/\` files (your business knowledge)
+- Skills: \`.claude/skills/\` files (specialized capabilities)
+- Outputs: \`outputs/\` directory (deliverables)
+- Files: \`files/\` directory (uploaded assets)
+
+## 5 Layers
+1. **Context** — Memory files in \`.claude/context/\`
+2. **Data** — Direct access via MCP tools or scripts
+3. **Intelligence** — Skills in \`.claude/skills/\` that analyze data
+4. **Automate** — Scripts, integrations, scheduled tasks
+5. **Build** — Generate deliverables into \`outputs/\`
+
+## Commands
+| Command | Purpose |
+|---------|---------|
+| \`/prime\` | Load context, check systems, ready to work |
+| \`/onboard\` | Update business knowledge |
+| \`/create-skill\` | Create a new skill interactively |
+
+## Context Files
+- \`.claude/context/personal-info.md\` — Who you're working with
+- \`.claude/context/business-info.md\` — Company, products, clients, financials
+- \`.claude/context/current-data.md\` — Live metrics, recent activity
+
+## Preferences
+- Concise and direct
+- Currency: ${data.currency || 'RM'}
+- Save outputs to \`outputs/\`
+- After important sessions, update \`.claude/context/current-data.md\`
+`
+    writeFileSync(join(activeInst.path, 'CLAUDE.md'), claudeMd, 'utf-8')
+
+    return { success: true }
+  })
+
+  ipcMain.handle('setup:status', () => {
+    const activeInst = getActiveInstance()
+    // Skip wizard if CLAUDE.md already has real content (existing instance)
+    const claudeMdPath = join(activeInst.path, 'CLAUDE.md')
+    if (existsSync(claudeMdPath)) {
+      const content = readFileSync(claudeMdPath, 'utf-8')
+      if (content.length > 100 && !content.includes('[NOT SET]')) {
+        return { needsSetup: false }
+      }
+    }
+    // Skip wizard if personal-info.md exists with real content
+    const personalPath = join(activeInst.path, '.claude', 'context', 'personal-info.md')
+    if (existsSync(personalPath)) {
+      const content = readFileSync(personalPath, 'utf-8')
+      if (!content.includes('[NOT SET]')) return { needsSetup: false }
+    }
+    return { needsSetup: true }
+  })
+
+  ipcMain.handle('auth:set-tier', (_event, email: string, tier: string) => {
+    setUserTier(email, tier)
+    return { success: true }
+  })
+
   // --- Instance management IPC ---
   ipcMain.removeHandler('instances:list')
   ipcMain.removeHandler('instances:active')
@@ -126,9 +356,38 @@ function createWindow() {
   ipcMain.removeHandler('app:info')
   ipcMain.removeHandler('shell:open-path')
   ipcMain.removeHandler('shell:show-in-folder')
+  ipcMain.removeHandler('files:save-temp-image')
+  ipcMain.removeHandler('clipboard:read-image')
 
   ipcMain.handle('shell:open-path', (_event, filePath: string) => shell.openPath(filePath))
   ipcMain.handle('shell:show-in-folder', (_event, filePath: string) => { shell.showItemInFolder(filePath) })
+
+  // Save pasted clipboard image to temp file, return path
+  ipcMain.handle('files:save-temp-image', (_event, base64Data: string, mimeType: string) => {
+    const ext = mimeType === 'image/png' ? 'png' : mimeType === 'image/gif' ? 'gif' : 'jpg'
+    const fileName = `paste-${Date.now()}.${ext}`
+    const tmpDir = join(app.getPath('temp'), 'aios-images')
+    mkdirSync(tmpDir, { recursive: true })
+    const filePath = join(tmpDir, fileName)
+    const buffer = Buffer.from(base64Data, 'base64')
+    writeFileSync(filePath, buffer)
+    return filePath
+  })
+
+  // Read image from system clipboard (native Electron API — most reliable)
+  ipcMain.handle('clipboard:read-image', () => {
+    const img = clipboard.readImage()
+    if (img.isEmpty()) return null
+    const png = img.toPNG()
+    const dataUrl = `data:image/png;base64,${png.toString('base64')}`
+    // Also save to temp file so it can be attached to messages
+    const fileName = `paste-${Date.now()}.png`
+    const tmpDir = join(app.getPath('temp'), 'aios-images')
+    mkdirSync(tmpDir, { recursive: true })
+    const filePath = join(tmpDir, fileName)
+    writeFileSync(filePath, png)
+    return { dataUrl, filePath }
+  })
 
   ipcMain.handle('instances:list', () => listInstances())
   ipcMain.handle('instances:active', () => getActiveInstance())
@@ -138,6 +397,7 @@ function createWindow() {
     if (!instance) return false
     setActiveInstanceId(id)
     setupFileHandlers(mainWindow!, instance.path)
+    updateSchedulerCwd(instance.path)
     mainWindow!.webContents.send('instance:switched', instance)
     return true
   })
@@ -323,6 +583,8 @@ app.on('activate', () => {
 app.on('window-all-closed', () => {
   closeDb()
   destroyFileWatcher()
+  destroyScheduler()
+  destroyWhatsApp()
   // macOS: keep app alive so dock click can re-open (like VS Code)
   if (process.platform !== 'darwin') {
     app.quit()

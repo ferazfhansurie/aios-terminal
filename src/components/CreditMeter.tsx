@@ -9,7 +9,7 @@ export default function CreditMeter() {
   if (isPro) {
     return (
       <div className="flex items-center gap-1.5 text-[11px]">
-        <span className="px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-400 font-medium">Pro</span>
+        <span className="px-1.5 py-0.5 rounded accent-bg-15 accent-text font-medium">PRO</span>
       </div>
     )
   }
@@ -19,7 +19,7 @@ export default function CreditMeter() {
       <div className="w-16 h-1 bg-white/[0.06] rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-500 ${
-            pct > 80 ? 'bg-red-500' : pct > 50 ? 'bg-yellow-500' : 'bg-orange-500'
+            pct > 80 ? 'bg-red-500' : pct > 50 ? 'bg-yellow-500' : 'accent-bg'
           }`}
           style={{ width: `${Math.min(pct, 100)}%` }}
         />
