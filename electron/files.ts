@@ -8,6 +8,7 @@ interface ClaudeDir {
   skills: { name: string; dirname: string; isDir: boolean }[]
   context: { name: string; filename: string }[]
   memory: { name: string; filename: string }[]
+  outputs: { name: string; filename: string }[]
   settings: Record<string, any> | null
 }
 
@@ -102,6 +103,7 @@ export function setupFileHandlers(win: BrowserWindow, cwd: string) {
       skills: [],
       context: [],
       memory: [],
+      outputs: [],
       settings: null,
     }
 
@@ -142,6 +144,13 @@ export function setupFileHandlers(win: BrowserWindow, cwd: string) {
           name: f.replace('.md', ''),
           filename: path.join(memoryDir, f),
         }))
+    }
+
+    const outputsDir = path.join(cwd, 'outputs')
+    if (fs.existsSync(outputsDir)) {
+      result.outputs = fs.readdirSync(outputsDir)
+        .filter(f => !fs.statSync(path.join(outputsDir, f)).isDirectory())
+        .map(f => ({ name: f, filename: path.join(outputsDir, f) }))
     }
 
     const settingsPath = path.join(claudeDir, 'settings.json')
