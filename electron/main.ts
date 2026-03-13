@@ -64,8 +64,9 @@ function createWindow() {
     const activeInst = getActiveInstance()
     const mcpServers = loadMcpServers(activeInst.path)
 
-    // Check credits (free tier)
-    if (!opts.apiKey) {
+    // Check credits (free tier only — owner and pro skip)
+    const isOwner = opts.apiKey === '__owner__'
+    if (!isOwner) {
       const used = getCreditsUsedToday()
       if (used >= FREE_DAILY_CREDITS) {
         mainWindow?.webContents.send('sdk:error', {

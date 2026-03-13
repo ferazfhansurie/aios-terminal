@@ -28,7 +28,8 @@ export async function runQuery(win: BrowserWindow, opts: QueryOptions) {
   }
 
   // API key — free tier users provide their own
-  if (opts.apiKey) {
+  // __owner__ and __local__ use existing Claude Code auth (no key needed)
+  if (opts.apiKey && opts.apiKey !== '__owner__' && opts.apiKey !== '__local__') {
     sdkOpts.apiKey = opts.apiKey
   }
 
