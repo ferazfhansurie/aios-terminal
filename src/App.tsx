@@ -1,63 +1,115 @@
-import { useState, useEffect } from 'react'
-import Terminal from './components/Terminal'
-import Sidebar from './components/Sidebar'
-import FileViewer from './components/FileViewer'
-import SchedulePanel from './components/SchedulePanel'
-import StatusBar from './components/StatusBar'
-import CommandPalette from './components/CommandPalette'
-
-type RightPanel = { type: 'file'; path: string } | { type: 'schedule' } | null
+import { useEffect } from 'react'
+import { useAppStore } from './stores/app-store'
+import ChatSidebar from './components/ChatSidebar'
+import ChatView from './components/ChatView'
+import CreditMeter from './components/CreditMeter'
 
 export default function App() {
-  const [rightPanel, setRightPanel] = useState<RightPanel>(null)
-  const [paletteOpen, setPaletteOpen] = useState(false)
-
-  // Convenience for sidebar file select
-  const handleFileSelect = (path: string) => setRightPanel({ type: 'file', path })
-  const handleScheduleOpen = () => setRightPanel({ type: 'schedule' })
-  const closePanel = () => setRightPanel(null)
+  const { view, loadConversations, loadCredits, sidebarOpen, setSidebarOpen } = useAppStore()
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        setPaletteOpen(p => !p)
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
+    loadConversations()
+    loadCredits()
+    const interval = setInterval(loadCredits, 30_000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // SDK message handler
+  useEffect(() => {
+    const aios = (window as any).aios
+    if (!aios) return
+
+    const unsubs = [
+      aios.onSdkMessage((data: any) => {
+        const store = useAppStore.getState()
+        const { conversationId, message } = data
+
+        if (message.type === 'assistant' && message.message?.content) {
+          const textParts = message.message.content
+            .filter((p: any) => p.type === 'text')
+            .map((p: any) => p.text)
+            .join('')
+          if (textParts) {
+            store.appendAssistantContent(conversationId, textParts)
+          }
+        }
+
+        if (message.type === 'assistant' && message.message?.content) {
+          const toolParts = message.message.content.filter((p: any) => p.type === 'tool_use')
+          for (const tool of toolParts) {
+            store.addToolCall(conversationId, {
+              name: tool.name,
+              input: tool.input,
+              status: 'running',
+            })
+          }
+        }
+
+        if (message.type === 'tool_result') {
+          store.updateToolCall(conversationId, message.tool_name, { status: 'done' })
+        }
+      }),
+
+      aios.onSdkResult((data: any) => {
+        const store = useAppStore.getState()
+        const { conversationId, sessionId } = data
+        store.setAssistantStreaming(conversationId, false)
+        if (sessionId) {
+          const convs = store.conversations.map((c) =>
+            c.id === conversationId ? { ...c, sessionId } : c
+          )
+          useAppStore.setState({ conversations: convs })
+        }
+        store.loadCredits()
+      }),
+
+      aios.onSdkError((data: any) => {
+        const store = useAppStore.getState()
+        store.appendAssistantContent(data.conversationId, `**Error:** ${data.error}`)
+        store.setAssistantStreaming(data.conversationId, false)
+      }),
+
+      aios.onSdkComplete((data: any) => {
+        useAppStore.getState().setQuerying(false)
+        useAppStore.getState().setAssistantStreaming(data.conversationId, false)
+      }),
+    ]
+
+    return () => unsubs.forEach((fn) => fn())
   }, [])
 
   return (
-    <div className="flex h-full bg-neutral-950 text-neutral-100">
-      {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
+    <div className="flex h-screen bg-[#0a0a0c] text-neutral-100">
+      <ChatSidebar />
 
-      {/* Sidebar */}
-      <div className="w-52 border-r border-neutral-800/40 bg-neutral-950 flex flex-col shrink-0">
-        <Sidebar onFileSelect={handleFileSelect} onScheduleOpen={handleScheduleOpen} />
-      </div>
-
-      {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0">
-        <div className="flex-1 min-h-0 relative flex">
-          {/* Terminal */}
-          <div className={`min-w-0 flex-1 ${rightPanel ? 'border-r border-neutral-800/60' : ''}`}>
-            <Terminal />
-          </div>
+        <div className="h-8 shrink-0 flex items-center px-3 app-drag-region">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="text-neutral-500 hover:text-neutral-300 text-sm no-drag"
+          >
+            ☰
+          </button>
+        </div>
 
-          {/* Right panel (file viewer or schedule) */}
-          {rightPanel?.type === 'file' && (
-            <div className="w-[45%] shrink-0 min-w-0">
-              <FileViewer filePath={rightPanel.path} onClose={closePanel} />
+        <div className="flex-1 min-h-0">
+          {view === 'chat' && <ChatView />}
+          {view === 'dashboard' && (
+            <div className="flex items-center justify-center h-full text-neutral-500 text-sm">
+              Dashboard — coming in v0.2
             </div>
           )}
-          {rightPanel?.type === 'schedule' && (
-            <div className="w-[45%] shrink-0 min-w-0">
-              <SchedulePanel onClose={closePanel} />
+          {view === 'settings' && (
+            <div className="flex items-center justify-center h-full text-neutral-500 text-sm">
+              Settings — coming soon
             </div>
           )}
         </div>
-        <StatusBar />
+
+        <div className="h-7 shrink-0 border-t border-white/[0.06] bg-[#0a0a0c] flex items-center justify-between px-3">
+          <span className="text-xs text-neutral-600">AIOS v0.1.0</span>
+          <CreditMeter />
+        </div>
       </div>
     </div>
   )
