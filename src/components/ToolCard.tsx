@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { ToolCall } from '../types'
 
 const TOOL_ICONS: Record<string, string> = {
@@ -61,24 +61,35 @@ function getInputDetails(tool: ToolCall): { label: string; value: string }[] {
 }
 
 export default function ToolCard({ tool }: { tool: ToolCall }) {
-  const [expanded, setExpanded] = useState(false)
+  const [manualToggle, setManualToggle] = useState<boolean | null>(null)
   const icon = TOOL_ICONS[tool.name] || TOOL_ICONS.default
   const isRunning = tool.status === 'running'
   const summary = formatInput(tool)
   const hasDetails = !!tool.input || !!tool.output
+  // Auto-expand running tools, collapse when done (unless manually toggled)
+  const expanded = manualToggle !== null ? manualToggle : isRunning
+
+  // Running timer
+  const [elapsed, setElapsed] = useState(0)
+  useEffect(() => {
+    if (!isRunning) { setElapsed(0); return }
+    const start = Date.now()
+    const interval = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 1000)
+    return () => clearInterval(interval)
+  }, [isRunning])
 
   return (
-    <div className="rounded-lg bg-white/[0.02] border border-white/[0.04] overflow-hidden transition-all text-xs">
+    <div className={`rounded-lg overflow-hidden transition-all text-xs ${isRunning ? 'bg-white/[0.03] border border-white/[0.08]' : 'bg-white/[0.02] border border-white/[0.04]'}`}>
       {/* Header — always clickable */}
       <div
         className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-white/[0.02] transition-colors"
-        onClick={() => setExpanded(!expanded)}
+        onClick={() => setManualToggle(expanded ? false : true)}
       >
         {/* Status indicator */}
         {isRunning ? (
-          <span className="flex gap-0.5 shrink-0">
-            <span className="w-1 h-1 rounded-full accent-pulse animate-pulse" />
-            <span className="w-1 h-1 rounded-full accent-pulse animate-pulse" style={{ animationDelay: '150ms' }} />
+          <span className="w-3 h-3 shrink-0 relative flex items-center justify-center">
+            <span className="absolute w-3 h-3 rounded-full accent-bg-20 animate-ping" />
+            <span className="w-1.5 h-1.5 rounded-full accent-bg" />
           </span>
         ) : tool.status === 'done' ? (
           <span className="w-1.5 h-1.5 rounded-full bg-green-500/80 shrink-0" />
@@ -87,13 +98,18 @@ export default function ToolCard({ tool }: { tool: ToolCall }) {
         )}
 
         <span className="text-[11px]">{icon}</span>
-        <span className="font-mono text-neutral-300 font-medium">{tool.name}</span>
+        <span className={`font-mono font-medium ${isRunning ? 'accent-text' : 'text-neutral-300'}`}>{tool.name}</span>
 
         {/* Summary */}
         {summary && (
           <span className="text-neutral-500 truncate font-mono flex-1 min-w-0">
             {summary.length > 80 ? summary.slice(0, 80) + '…' : summary}
           </span>
+        )}
+
+        {/* Running timer */}
+        {isRunning && elapsed > 0 && (
+          <span className="text-[10px] text-neutral-600 font-mono shrink-0">{elapsed}s</span>
         )}
 
         {/* Expand chevron */}

@@ -31,13 +31,19 @@ if (!fs.existsSync(DEFAULT_CWD)) {
 }
 
 // ── System prompt for AI guardrails ──
-const AIOS_SYSTEM_PROMPT = `CRITICAL SAFETY RULES — you are running on a PRODUCTION SERVER (bisnesgpt):
-1. NEVER modify files in ~/aios-web/ or its subdirectories (dist/, public/, server.ts, etc). These are the web server files serving this interface.
-2. NEVER overwrite or create HTML files in dist/ or public/ directories.
-3. NEVER run "pm2 restart aios-web" or kill the web server process.
-4. Your working directory is ${DEFAULT_CWD} — only work within it.
-5. When asked to deploy or update the web, tell the user to run the deploy script from their local machine instead.
-6. Be concise, direct, and take action. You are AIOS, the AI co-founder at Adletic.`;
+const AIOS_SYSTEM_PROMPT = `You are running on bisnesgpt server (production). Be concise, direct, and take action.
+
+WEB SELF-UPDATE PROCEDURE — when asked to update or deploy the web UI:
+1. Source repo is at ~/aios-terminal (git, has vite.web.config.ts)
+2. Edit source files in ~/aios-terminal/src/ or ~/aios-terminal/web/
+3. Build: cd ~/aios-terminal && source ~/.nvm/nvm.sh && npx vite build --config vite.web.config.ts
+4. Deploy: rm -rf ~/aios-web/dist/assets/* && cp -r ~/aios-terminal/web/dist/* ~/aios-web/dist/
+5. For server changes: cp ~/aios-terminal/web/server.ts ~/aios-web/server.ts && pm2 restart aios-web
+6. NEVER create standalone HTML apps with CDN scripts. ALWAYS use the Vite build pipeline.
+7. NEVER replace dist/index.html with hand-written HTML. It must come from the Vite build.
+8. After deploying server changes, commit: cd ~/aios-terminal && git add -A && git commit -m "description" && git push
+
+Your working directory is ${DEFAULT_CWD}. You can also work in ~/aios-terminal for web updates.`;
 
 // ── Session tokens ──
 const validSessions = new Set<string>();
