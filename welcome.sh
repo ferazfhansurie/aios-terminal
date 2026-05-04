@@ -263,11 +263,17 @@ if [[ -z "$AIOS_SESSION_NAME" && "$ADLETIC_SKIP_NAME_PROMPT" != "1" ]] && comman
 
   key="${picker_choice%%$'\n'*}"
   selection="${picker_choice##*$'\n'}"
-  # Strip ANSI escape sequences before parsing the selection.
-  selection_plain="${selection//$'\e'\[[0-9;]##[a-zA-Z]/}"
-  # Selection_name: 2nd whitespace-separated field (after the ● dot), trimmed.
-  selection_name="${selection_plain##[[:space:]]#[●·○]#[[:space:]]#}"
-  selection_name="${selection_name%%[[:space:]]*}"
+  # Strip ANSI escape sequences (sed handles this reliably across zsh setopts).
+  selection_plain=$(print -- "$selection" | sed -E $'s/\x1b\\[[0-9;]*[a-zA-Z]//g')
+  # Extract the workspace name: it's the second whitespace-separated field
+  # (skipping the ● marker). For the "+ new workspace" affordance row, the
+  # name is unused — we match on selection_plain directly below.
+  selection_name=""
+  if [[ "$selection_plain" != *"new workspace"* ]]; then
+    typeset -a _fields
+    _fields=(${=selection_plain})   # zsh word-split on IFS
+    selection_name="${_fields[2]}"  # 1=marker (●/○), 2=name, rest=· idle/...
+  fi
 
   case "$key" in
     ctrl-n)
