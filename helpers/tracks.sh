@@ -5,6 +5,9 @@
 
 set -eu
 
+# Ensure helper sees a usable PATH when tmux strips env.
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+
 SESSIONS="$HOME/.aios/sessions"
 [[ -d "$SESSIONS" ]] || { print -- ""; exit 0; }
 

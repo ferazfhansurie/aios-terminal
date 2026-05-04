@@ -4,6 +4,8 @@
 
 set -eu
 
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+
 DIR="${1:-$PWD}"
 CACHE_DIR="${HOME}/.cache/adletic"
 mkdir -p "$CACHE_DIR"

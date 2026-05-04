@@ -2,24 +2,23 @@
 # helpers/hud.sh — render the status-right cost block when claude is focused.
 # Output empty when no active claude or when CLI cost surface is missing.
 #
+# Called from tmux status-right with the focused pane's path:
+#   #(~/.config/adletic/helpers/hud.sh #{pane_current_path})
+#
 # PF-1 finding (NOTES.md): the claude CLI has no public cost surface.
 # We read the JSONL transcript at ~/.claude/projects/<encoded-cwd>/<uuid>.jsonl
 # and sum input/output/cache token usage from the latest session for the cwd.
 
 set -eu
 
+# Ensure helpers can find python3 / awk / etc when tmux strips PATH.
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+
 CACHE_DIR="$HOME/.cache/adletic"
 mkdir -p "$CACHE_DIR"
 
-# Resolve cwd from the caller's tmux pane (helpers run from tmux status-right).
-# Fall back to $PWD when not inside tmux.
-if [[ -n "${TMUX:-}" ]] && command -v tmux >/dev/null 2>&1; then
-  cwd=$(tmux -L adletic display-message -p '#{pane_current_path}' 2>/dev/null \
-        || tmux display-message -p '#{pane_current_path}' 2>/dev/null \
-        || print -- "$PWD")
-else
-  cwd="$PWD"
-fi
+# cwd from arg (passed by tmux), fallback to $PWD.
+cwd="${1:-$PWD}"
 [[ -z "$cwd" ]] && cwd="$PWD"
 
 # Cache key: hash of cwd → 10s TTL (JSONL parse can be slow on big sessions).
