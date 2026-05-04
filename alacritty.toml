@@ -308,7 +308,7 @@ mods = "Command"
 chars = "\u0001J"  # bound in tmux.conf
 
 [general]
-working_directory = "/Users/firazfhansurie/Repo/firaz/adletic/aios-firaz"
+working_directory = "/Users/firazfhansurie"
 live_config_reload = true
 
 # ========================================================================
