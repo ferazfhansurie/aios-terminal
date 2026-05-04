@@ -283,6 +283,12 @@ key = "I"
 mods = "Command"
 chars = "\u0001I"  # bound in tmux.conf
 
+# ⌘P — Palette (fuzzy launcher)
+[[keyboard.bindings]]
+key = "P"
+mods = "Command"
+chars = "\u0001P"  # bound in tmux.conf
+
 # ⌘J — Just-ask (claude popup)
 [[keyboard.bindings]]
 key = "J"
