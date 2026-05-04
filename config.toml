@@ -1,0 +1,12 @@
+# ~/.config/adletic/config.toml
+# User prefs. Edit freely.
+
+[currency]
+default_usd_to_myr = 4.70   # fallback when fx fetch is offline
+
+[editor]
+visual = "micro"            # used by helpers/edit.sh
+
+[hud]
+refresh_interval_secs = 2
+hide_cost_when_idle = true
