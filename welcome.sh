@@ -221,8 +221,7 @@ if [[ -z "$AIOS_SESSION_NAME" && "$ADLETIC_SKIP_NAME_PROMPT" != "1" ]] && comman
         local inbox="$HOME/.aios/sessions/${nm}/inbox.jsonl"
         local read_marker="$HOME/.aios/sessions/${nm}/inbox.read"
         if [[ -f "$inbox" ]]; then
-          local total=$(wc -l < "$inbox" 2>/dev/null || print 0)
-          local rc=0
+          total=$(wc -l < "$inbox" 2>/dev/null || print 0)
           [[ -f "$read_marker" ]] && rc=$(<"$read_marker")
           unread=$(( total - rc ))
         fi
