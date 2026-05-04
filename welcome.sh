@@ -40,12 +40,22 @@ BOLD=$'\e[1m'
 ANIM=1
 [[ "$ADLETIC_NO_ANIM" == "1" ]] && ANIM=0
 
-anim_sleep_ms() {
-  (( ANIM == 0 )) && return 0
-  local ms=$1
-  # zsh has builtin sleep with sub-second precision (no external sleep needed)
-  sleep "0.$(printf '%03d' "$ms")"
-}
+# Use zsh/zselect for builtin (fork-free) sub-second sleeps. Without this,
+# every animation step forks /bin/sleep — ~30ms overhead each on macOS,
+# blowing the animation budget by 5×.
+if zmodload zsh/zselect 2>/dev/null; then
+  # zselect available — use the fast path. Args in centiseconds (10ms).
+  anim_sleep_ms() {
+    (( ANIM == 0 )) && return 0
+    zselect -t "$(( ($1 + 9) / 10 ))"
+  }
+else
+  # Fallback: external sleep. Slower but functional.
+  anim_sleep_ms() {
+    (( ANIM == 0 )) && return 0
+    sleep "0.$(printf '%03d' "$1")"
+  }
+fi
 
 anim_println() {
   # Print a line, then sleep N ms. Args: <ms> <text>...
@@ -55,16 +65,29 @@ anim_println() {
 }
 
 anim_typewriter() {
-  # Print text char-by-char with N ms between chars.
+  # Print text char-by-char with N ms between visible chars. ANSI escape
+  # sequences (\e[…m) are emitted instantly so coloured text doesn't make
+  # the typewriter feel laggy.
   local ms=$1; shift
   local text="$*"
   if (( ANIM == 0 )); then
     print -- "$text"
     return
   fi
-  local i
+  local i ch in_esc=0
   for (( i = 1; i <= ${#text}; i++ )); do
-    print -n -- "${text[$i]}"
+    ch="${text[$i]}"
+    if (( in_esc )); then
+      print -n -- "$ch"
+      [[ "$ch" == [a-zA-Z] ]] && in_esc=0
+      continue
+    fi
+    if [[ "$ch" == $'\e' ]]; then
+      print -n -- "$ch"
+      in_esc=1
+      continue
+    fi
+    print -n -- "$ch"
     anim_sleep_ms "$ms"
   done
   print
