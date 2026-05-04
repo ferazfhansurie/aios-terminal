@@ -277,6 +277,12 @@ key = "E"
 mods = "Command"
 chars = "\u0001E"  # tmux prefix Ctrl-A then capital E (bound in tmux.conf)
 
+# ⌘I — Inbox (cross-session messages)
+[[keyboard.bindings]]
+key = "I"
+mods = "Command"
+chars = "\u0001I"  # bound in tmux.conf
+
 # ⌘J — Just-ask (claude popup)
 [[keyboard.bindings]]
 key = "J"
