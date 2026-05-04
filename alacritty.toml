@@ -375,3 +375,13 @@ white   = "#ffffff"
 [[colors.indexed_colors]]
 index = 16
 color = "#f26522"
+
+# ========================================================================
+# ⌘Q — confirmation dialog before quitting. Without this, an accidental
+# ⌘Q kills every workspace and every running Claude session.
+# Placed at end so it overrides the default Quit action.
+# ========================================================================
+[[keyboard.bindings]]
+key = "Q"
+mods = "Command"
+command = { program = "/Users/firazfhansurie/.config/adletic/helpers/confirm-quit.sh", args = [] }
