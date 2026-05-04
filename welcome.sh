@@ -162,40 +162,79 @@ done
 
 print
 
-# ─── Pick a session name (or attach to an existing one) ────────
-# If $AIOS_SESSION_NAME is set externally (e.g. spawned via adletic
-# msg create-window), honour it. Otherwise prompt — three outcomes:
-#   • empty input         → auto-generate track-N
-#   • new name            → create a fresh session with that name
-#   • existing tmux name  → attach to that running session instead
+# ─── Interactive session picker ────────────────────────────────
+# fzf list of existing sessions + a "create new" affordance.
+# Bindings: enter=attach, ctrl-n=new, ctrl-d=delete, esc=plain shell.
 #
-# Override knob: ADLETIC_SKIP_NAME_PROMPT=1 skips the prompt entirely.
-if [[ -z "$AIOS_SESSION_NAME" && "$ADLETIC_SKIP_NAME_PROMPT" != "1" ]]; then
-  EXISTING_SESSIONS=$(tmux -L adletic list-sessions -F '#{session_name}' 2>/dev/null | sort | paste -sd ' ' -)
-  if [[ -n "$EXISTING_SESSIONS" ]]; then
-    print "  ${DIM}running: ${ORANGE}${EXISTING_SESSIONS}${RESET}"
-  fi
-  print -n "  ${ORANGE}❯${RESET} ${WHITE}name${RESET} ${DIM}(empty=auto, existing=attach)${RESET}: "
-  read -r AIOS_SESSION_NAME_INPUT </dev/tty
-  AIOS_SESSION_NAME_INPUT=${AIOS_SESSION_NAME_INPUT// /-}
-  AIOS_SESSION_NAME_INPUT=${AIOS_SESSION_NAME_INPUT:l}
-  if [[ -n "$AIOS_SESSION_NAME_INPUT" ]]; then
-    if tmux -L adletic has-session -t "$AIOS_SESSION_NAME_INPUT" 2>/dev/null; then
-      # Existing live session — attach instead of creating a new one. Bail
-      # out of welcome.sh entirely and hand the pane to tmux.
-      print "  ${ORANGE}↪${RESET} ${DIM}attaching to ${WHITE}${AIOS_SESSION_NAME_INPUT}${RESET}"
-      sleep 0.3
-      exec tmux -f "$TMUX_CONF" -L adletic attach-session -t "$AIOS_SESSION_NAME_INPUT"
-    elif [[ -d "$HOME/.aios/sessions/$AIOS_SESSION_NAME_INPUT" ]]; then
-      # Registry dir exists but no live tmux session — zombie. Reuse the
-      # name so inbox / outbox history is preserved.
-      print "  ${ORANGE}↻${RESET} ${DIM}reusing zombie name ${WHITE}${AIOS_SESSION_NAME_INPUT}${RESET}"
-      AIOS_SESSION_NAME="$AIOS_SESSION_NAME_INPUT"
-    else
-      AIOS_SESSION_NAME="$AIOS_SESSION_NAME_INPUT"
+# Override knob: ADLETIC_SKIP_NAME_PROMPT=1 skips the picker entirely.
+if [[ -z "$AIOS_SESSION_NAME" && "$ADLETIC_SKIP_NAME_PROMPT" != "1" ]] && command -v fzf >/dev/null 2>&1; then
+
+  build_picker_lines() {
+    print "+ create new track"
+    if [[ -d "$HOME/.aios/sessions" ]]; then
+      for d in "$HOME"/.aios/sessions/*(/N); do
+        local nm="${d:t}"
+        local marker="·"
+        if tmux -L adletic has-session -t "$nm" 2>/dev/null; then
+          if tmux -L adletic list-panes -s -t "$nm" -F '#{pane_current_command}' 2>/dev/null | grep -q '^claude'; then
+            marker="●"
+          else
+            marker="○"
+          fi
+        fi
+        print "  ${marker} ${nm}"
+      done
     fi
+  }
+
+  picker_choice=$(build_picker_lines | fzf \
+    --height=60% --reverse --no-info --prompt="❯ " \
+    --pointer="❯" --color="pointer:#f26522,prompt:#f26522,fg+:#ffffff,bg+:#0d1117" \
+    --header=$'\nenter: attach   ctrl-n: new   ctrl-d: delete   esc: plain shell\n' \
+    --header-first \
+    --expect=ctrl-n,ctrl-d,esc \
+    --bind="esc:abort")
+
+  if [[ -z "$picker_choice" ]]; then
+    exec /bin/zsh -l   # esc or no selection → plain shell
   fi
-  print
+
+  key="${picker_choice%%$'\n'*}"
+  selection="${picker_choice##*$'\n'}"
+  selection_name="${selection##*[[:space:]]}"   # strip leading whitespace and marker prefix
+
+  case "$key" in
+    ctrl-n)
+      print -n "  new track name: "
+      read -r new_name
+      [[ -z "$new_name" ]] && exec /bin/zsh -l
+      AIOS_SESSION_NAME="$new_name" exec "$AIOS_BIN" new "$new_name"
+      ;;
+    ctrl-d)
+      [[ "$selection" == *"create new"* ]] && exec "$0"
+      # Refuse delete on the affordance row; otherwise confirm.
+      print -n "  delete track ${selection_name}? [y/N]: "
+      read -r confirm
+      if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
+        "$AIOS_BIN" kill "$selection_name" 2>/dev/null \
+          || tmux -L adletic kill-session -t "$selection_name" 2>/dev/null
+        rm -rf "$HOME/.aios/sessions/$selection_name" 2>/dev/null
+        print "  deleted ${selection_name}. press any key…"
+        read -k1 -s
+      fi
+      exec "$0"   # restart welcome.sh to refresh the picker
+      ;;
+    *)
+      if [[ "$selection" == *"create new"* ]]; then
+        print -n "  new track name: "
+        read -r new_name
+        [[ -z "$new_name" ]] && exec /bin/zsh -l
+        AIOS_SESSION_NAME="$new_name" exec "$AIOS_BIN" new "$new_name"
+      else
+        AIOS_SESSION_NAME="$selection_name" exec "$AIOS_BIN" switch "$selection_name"
+      fi
+      ;;
+  esac
 fi
 
 # Fall back to track-N when no custom name was accepted above.
