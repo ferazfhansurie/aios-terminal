@@ -295,6 +295,12 @@ key = "Slash"
 mods = "Command"
 chars = "\u0001/"  # bound in tmux.conf
 
+# ⌘O — Outbox (append-to-notes)
+[[keyboard.bindings]]
+key = "O"
+mods = "Command"
+chars = "\u0001O"  # bound in tmux.conf
+
 # ⌘J — Just-ask (claude popup)
 [[keyboard.bindings]]
 key = "J"
