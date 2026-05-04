@@ -271,6 +271,18 @@ key = "R"
 mods = "Command|Shift"
 chars = "\u0001R"
 
+# ⌘E — Explorer (Yazi popup)
+[[keyboard.bindings]]
+key = "E"
+mods = "Command"
+chars = "\u0001E"  # tmux prefix Ctrl-A then capital E (bound in tmux.conf)
+
+# ⌘J — Just-ask (claude popup)
+[[keyboard.bindings]]
+key = "J"
+mods = "Command"
+chars = "\u0001J"  # bound in tmux.conf
+
 [general]
 working_directory = "/Users/firazfhansurie/Repo/firaz/adletic/aios-firaz"
 live_config_reload = true
