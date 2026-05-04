@@ -2,6 +2,7 @@
 # Adletic terminal boot — banner → tmux → plain shell.
 # No auto-Claude. Each window is a fresh, independent session.
 # To start Claude: type `claude` (or `aios` to jump to AIOS workspace).
+# Set ADLETIC_SHIMMER=1 for animated boot (default is instant).
 #
 # Override knobs:
 #   ADLETIC_SKIP_BOOT=1   drop into raw zsh (skip banner+tmux)
@@ -34,10 +35,12 @@ RESET=$'\e[0m'
 BOLD=$'\e[1m'
 
 # ─── Animation primitives ──────────────────────────────────────
-# Skip animations if ADLETIC_NO_ANIM=1 (CI, fast loops).
+# Animations are OFF by default (instant render). Opt in with
+# ADLETIC_SHIMMER=1. ADLETIC_NO_ANIM=1 still forces off (back-compat).
 # Timeless: pure ANSI cursor escapes + sleep, no external deps.
 
-ANIM=1
+ANIM=0
+[[ "$ADLETIC_SHIMMER" == "1" ]] && ANIM=1
 [[ "$ADLETIC_NO_ANIM" == "1" ]] && ANIM=0
 
 # Use zsh/zselect for builtin (fork-free) sub-second sleeps. Without this,
@@ -65,16 +68,17 @@ anim_println() {
 }
 
 anim_typewriter() {
-  # Print text char-by-char with N ms between visible chars. ANSI escape
+  # Print text in small chunks with N ms between flushes. ANSI escape
   # sequences (\e[…m) are emitted instantly so coloured text doesn't make
-  # the typewriter feel laggy.
+  # the typewriter feel laggy. Batches `chunk` visible chars per tick to
+  # keep total budget bounded under the zselect 10ms floor.
   local ms=$1; shift
   local text="$*"
   if (( ANIM == 0 )); then
     print -- "$text"
     return
   fi
-  local i ch in_esc=0
+  local i ch in_esc=0 visible=0 chunk=8
   for (( i = 1; i <= ${#text}; i++ )); do
     ch="${text[$i]}"
     if (( in_esc )); then
@@ -88,7 +92,10 @@ anim_typewriter() {
       continue
     fi
     print -n -- "$ch"
-    anim_sleep_ms "$ms"
+    visible=$(( visible + 1 ))
+    if (( visible % chunk == 0 )); then
+      anim_sleep_ms "$ms"
+    fi
   done
   print
 }
@@ -112,41 +119,67 @@ ORANGE_MID=$'\e[38;2;242;101;34m'
 ORANGE_HOT=$'\e[38;2;253;132;57m'
 YELLOW_FLASH=$'\e[38;2;251;191;36m'
 
+# Banner: AIOS in ANSI Shadow figlet, gradient orange.
+# Each row's plain (uncolored) glyph block is exactly 28 cols wide.
 banner_lines=(
-  "  ${ORANGE_DEEP}${BOLD}     █████╗ ██████╗ ██╗     ███████╗████████╗██╗ ██████╗${RESET}"
-  "  ${ORANGE_DEEP}${BOLD}    ██╔══██╗██╔══██╗██║     ██╔════╝╚══██╔══╝██║██╔════╝${RESET}"
-  "  ${ORANGE_MID}${BOLD}    ███████║██║  ██║██║     █████╗     ██║   ██║██║     ${RESET}"
-  "  ${ORANGE_MID}${BOLD}    ██╔══██║██║  ██║██║     ██╔══╝     ██║   ██║██║     ${RESET}"
-  "  ${ORANGE_HOT}${BOLD}    ██║  ██║██████╔╝███████╗███████╗   ██║   ██║╚██████╗${RESET}"
-  "  ${ORANGE_HOT}${BOLD}    ╚═╝  ╚═╝╚═════╝ ╚══════╝╚══════╝   ╚═╝   ╚═╝ ╚═════╝${RESET}"
+  "  ${ORANGE_DEEP}${BOLD} █████╗ ██╗  ██████╗ ███████╗${RESET}"
+  "  ${ORANGE_DEEP}${BOLD}██╔══██╗██║ ██╔═══██╗██╔════╝${RESET}"
+  "  ${ORANGE_MID}${BOLD}███████║██║ ██║   ██║███████╗${RESET}"
+  "  ${ORANGE_MID}${BOLD}██╔══██║██║ ██║   ██║╚════██║${RESET}"
+  "  ${ORANGE_HOT}${BOLD}██║  ██║██║ ╚██████╔╝███████║${RESET}"
+  "  ${ORANGE_HOT}${BOLD}╚═╝  ╚═╝╚═╝  ╚═════╝ ╚══════╝${RESET}"
 )
+
+# Mascot: 6 rows (1 blank top to align vertically with banner).
+# Box outline orange, eyes/smile white, lightning yellow, legs hot orange.
+PAD="    "
+mascot_lines=(
+  ""
+  "${ORANGE_MID}┌───────┐${RESET}"
+  "${ORANGE_MID}│${RESET} ${WHITE}◣${RESET}   ${WHITE}◢${RESET} ${ORANGE_MID}│${RESET}  ${YELLOW_FLASH}⚡${RESET}"
+  "${ORANGE_MID}│${RESET}   ${WHITE}◡${RESET}   ${ORANGE_MID}│${RESET}"
+  "${ORANGE_MID}└───────┘${RESET}"
+  "  ${ORANGE_HOT}▌${RESET}   ${ORANGE_HOT}▐${RESET}"
+)
+
+# Banner stagger delay: 15ms when ANIM=1 (rounds to 20ms via zselect), 0ms otherwise.
+banner_delay=0
+(( ANIM == 1 )) && banner_delay=15
+
 print
-for line in "${banner_lines[@]}"; do
-  anim_println 50 "$line"
+for (( bi = 1; bi <= ${#banner_lines[@]}; bi++ )); do
+  anim_println "$banner_delay" "${banner_lines[$bi]}${PAD}${mascot_lines[$bi]}"
 done
 
-# Flash: redraw banner in yellow, hold 60ms, redraw in orange.
+# Flash: redraw banner in yellow, hold 40ms, redraw in orange.
+# Only the banner cells flash — mascot stays put.
 if (( ANIM == 1 )); then
   print -n "\e[6A"            # cursor up 6 lines
-  for line in "${banner_lines[@]}"; do
+  for (( bi = 1; bi <= ${#banner_lines[@]}; bi++ )); do
+    line="${banner_lines[$bi]}"
     yellow_line="${line//$ORANGE_DEEP/$YELLOW_FLASH}"
     yellow_line="${yellow_line//$ORANGE_MID/$YELLOW_FLASH}"
     yellow_line="${yellow_line//$ORANGE_HOT/$YELLOW_FLASH}"
-    print -- "$yellow_line"
+    print -- "${yellow_line}${PAD}${mascot_lines[$bi]}"
   done
-  anim_sleep_ms 60
+  anim_sleep_ms 40
   print -n "\e[6A"
-  for line in "${banner_lines[@]}"; do
-    print -- "$line"
+  for (( bi = 1; bi <= ${#banner_lines[@]}; bi++ )); do
+    print -- "${banner_lines[$bi]}${PAD}${mascot_lines[$bi]}"
   done
 fi
 
 print
-anim_typewriter 8 "  ${WHITE}AI Operating System${RESET}  ${DIM}·  type ${RESET}${ORANGE_MID}aios${RESET}${DIM} to start Claude in workspace${RESET}"
-print
+# Subtitle: white text with "Claude Code" in orange.
+subtitle_text="  ${WHITE}AI workspace for ${ORANGE_MID}Claude Code${WHITE} · multi-session ops${RESET}"
+if (( ANIM == 1 )); then
+  anim_typewriter 1 "$subtitle_text"
+else
+  print -- "$subtitle_text"
+fi
 
-# Per-track scan — animates as it resolves each track's status.
-print "  ${DIM}scanning tracks…${RESET}"
+# Dim-orange horizontal separator (~64 chars wide, 2-space left padding).
+print "  ${ORANGE_DEEP}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
 print
 
 track_names=()
@@ -156,17 +189,24 @@ if [[ -d "$HOME/.aios/sessions" ]]; then
   done
 fi
 
+# Per-workspace stagger delay: 10ms when ANIM=1 (zselect floor), 0ms otherwise.
+ws_delay=0
+(( ANIM == 1 )) && ws_delay=10
+
 for name in "${track_names[@]}"; do
   [[ -z "$name" ]] && continue
-  # Print hollow circle first
-  print "  ${DIM}◌${RESET} ${name}"
-  anim_sleep_ms 80
 
   # Resolve state
+  busy=0
   state="${DIM}✓ idle${RESET}"
+  dot="${DIM}●${RESET}"
+  name_color="${DIM}"
   if tmux -L adletic has-session -t "$name" 2>/dev/null; then
     if tmux -L adletic list-panes -s -t "$name" -F '#{pane_current_command}' 2>/dev/null | grep -q '^claude'; then
-      state="${ORANGE_MID}● active claude${RESET}"
+      state="${ORANGE_MID}● busy with claude${RESET}"
+      dot="${ORANGE_MID}●${RESET}"
+      name_color="${WHITE}"
+      busy=1
     fi
   fi
   unread=0
@@ -177,10 +217,9 @@ for name in "${track_names[@]}"; do
     rc=0; [[ -f "$read_marker" ]] && rc=$(<"$read_marker")
     unread=$(( total - rc ))
   fi
-  (( unread > 0 )) && state="${state} ${YELLOW_FLASH}· ${unread} unread${RESET}"
+  (( unread > 0 )) && state="${state} ${YELLOW_FLASH}· ${unread} messages${RESET}"
 
-  # Overwrite the hollow row with the resolved one
-  anim_overwrite_line 1 "  ${ORANGE_MID}●${RESET} ${name}  ${DIM}→${RESET}  ${state}"
+  anim_println "$ws_delay" "  ${dot} ${name_color}${name}${RESET}  ${DIM}→${RESET}  ${state}"
 done
 
 print
@@ -192,28 +231,72 @@ print
 # Override knob: ADLETIC_SKIP_NAME_PROMPT=1 skips the picker entirely.
 if [[ -z "$AIOS_SESSION_NAME" && "$ADLETIC_SKIP_NAME_PROMPT" != "1" ]] && command -v fzf >/dev/null 2>&1; then
 
+  # One-line invitation above the picker.
+  print "  ${WHITE}Pick a workspace to open, or create a new one.${RESET}"
+  print
+
+  # Compute padded width: longest name + 2 spaces, min 8.
   build_picker_lines() {
-    print "+ create new track"
+    local maxw=8
     if [[ -d "$HOME/.aios/sessions" ]]; then
       for d in "$HOME"/.aios/sessions/*(/N); do
         local nm="${d:t}"
-        local marker="·"
+        (( ${#nm} > maxw )) && maxw=${#nm}
+      done
+    fi
+    local colw=$((maxw + 2))
+
+    # First row: + new workspace (orange).
+    printf '%s+ new workspace%s\n' "${ORANGE_MID}" "${RESET}"
+
+    if [[ -d "$HOME/.aios/sessions" ]]; then
+      for d in "$HOME"/.aios/sessions/*(/N); do
+        local nm="${d:t}"
+        local busy=0
         if tmux -L adletic has-session -t "$nm" 2>/dev/null; then
           if tmux -L adletic list-panes -s -t "$nm" -F '#{pane_current_command}' 2>/dev/null | grep -q '^claude'; then
-            marker="●"
-          else
-            marker="○"
+            busy=1
           fi
         fi
-        print "  ${marker} ${nm}"
+        local unread=0
+        local inbox="$HOME/.aios/sessions/${nm}/inbox.jsonl"
+        local read_marker="$HOME/.aios/sessions/${nm}/inbox.read"
+        if [[ -f "$inbox" ]]; then
+          local total
+          total=$(wc -l < "$inbox" 2>/dev/null || print 0)
+          local rc=0
+          [[ -f "$read_marker" ]] && rc=$(<"$read_marker")
+          unread=$(( total - rc ))
+        fi
+
+        local dot_color="${DIM}"
+        local name_color="${DIM}"
+        local sep_color="${DIM}"
+        local state_text="idle"
+        if (( busy == 1 )); then
+          dot_color="${ORANGE_MID}"
+          name_color="${WHITE}"
+          sep_color="${WHITE}"
+          state_text="busy with claude"
+        fi
+
+        # Pad the name to colw visible characters.
+        local padded_name
+        padded_name=$(printf '%-*s' "$colw" "$nm")
+
+        local row="${dot_color}●${RESET} ${name_color}${padded_name}${RESET}${sep_color}· ${state_text}${RESET}"
+        if (( unread > 0 )); then
+          row="${row} ${DIM}·${RESET} ${YELLOW_FLASH}${unread} messages${RESET}"
+        fi
+        print -- "$row"
       done
     fi
   }
 
-  picker_choice=$(build_picker_lines | fzf \
+  picker_choice=$(build_picker_lines | fzf --ansi \
     --height=60% --reverse --no-info --prompt="❯ " \
     --pointer="❯" --color="pointer:#f26522,prompt:#f26522,fg+:#ffffff,bg+:#0d1117" \
-    --header=$'\nenter: attach   ctrl-n: new   ctrl-d: delete   esc: plain shell\n' \
+    --header=$'\n↑↓ navigate   enter open   ctrl-n new   ctrl-d remove   esc skip\n' \
     --header-first \
     --expect=ctrl-n,ctrl-d,esc \
     --bind="esc:abort")
@@ -224,32 +307,36 @@ if [[ -z "$AIOS_SESSION_NAME" && "$ADLETIC_SKIP_NAME_PROMPT" != "1" ]] && comman
 
   key="${picker_choice%%$'\n'*}"
   selection="${picker_choice##*$'\n'}"
-  selection_name="${selection##*[[:space:]]}"   # strip leading whitespace and marker prefix
+  # Strip ANSI escape sequences before parsing the selection.
+  selection_plain="${selection//$'\e'\[[0-9;]##[a-zA-Z]/}"
+  # Selection_name: 2nd whitespace-separated field (after the ● dot), trimmed.
+  selection_name="${selection_plain##[[:space:]]#[●·○]#[[:space:]]#}"
+  selection_name="${selection_name%%[[:space:]]*}"
 
   case "$key" in
     ctrl-n)
-      print -n "  new track name: "
+      print -n "  new workspace name: "
       read -r new_name
       [[ -z "$new_name" ]] && exec /bin/zsh -l
       AIOS_SESSION_NAME="$new_name" exec "$AIOS_BIN" new "$new_name"
       ;;
     ctrl-d)
-      [[ "$selection" == *"create new"* ]] && exec "$0"
+      [[ "$selection_plain" == *"new workspace"* ]] && exec "$0"
       # Refuse delete on the affordance row; otherwise confirm.
-      print -n "  delete track ${selection_name}? [y/N]: "
+      print -n "  remove workspace ${selection_name}? [y/N]: "
       read -r confirm
       if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
         "$AIOS_BIN" kill "$selection_name" 2>/dev/null \
           || tmux -L adletic kill-session -t "$selection_name" 2>/dev/null
         rm -rf "$HOME/.aios/sessions/$selection_name" 2>/dev/null
-        print "  deleted ${selection_name}. press any key…"
+        print "  removed ${selection_name}. press any key…"
         read -k1 -s
       fi
       exec "$0"   # restart welcome.sh to refresh the picker
       ;;
     *)
-      if [[ "$selection" == *"create new"* ]]; then
-        print -n "  new track name: "
+      if [[ "$selection_plain" == *"new workspace"* ]]; then
+        print -n "  new workspace name: "
         read -r new_name
         [[ -z "$new_name" ]] && exec /bin/zsh -l
         AIOS_SESSION_NAME="$new_name" exec "$AIOS_BIN" new "$new_name"
@@ -260,14 +347,14 @@ if [[ -z "$AIOS_SESSION_NAME" && "$ADLETIC_SKIP_NAME_PROMPT" != "1" ]] && comman
   esac
 fi
 
-# Fall back to track-N when no custom name was accepted above.
+# Fall back to workspace-N when no custom name was accepted above.
 if [[ -z "$AIOS_SESSION_NAME" ]]; then
   i=1
-  while tmux -L adletic has-session -t "track-$i" 2>/dev/null \
-        || [[ -d "$HOME/.aios/sessions/track-$i" ]]; do
+  while tmux -L adletic has-session -t "workspace-$i" 2>/dev/null \
+        || [[ -d "$HOME/.aios/sessions/workspace-$i" ]]; do
     i=$((i + 1))
   done
-  AIOS_SESSION_NAME="track-$i"
+  AIOS_SESSION_NAME="workspace-$i"
 fi
 export AIOS_SESSION_NAME
 

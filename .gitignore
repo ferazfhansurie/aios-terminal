@@ -2,3 +2,4 @@
 *.pid
 .DS_Store
 tmux-plugins/
+micro/buffers/

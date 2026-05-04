@@ -57,3 +57,10 @@ All seven tools installed via Homebrew on 2026-05-04:
 - chafa 1.18.2
 
 No formula failed to resolve.
+
+## HUD v2 — aggregate usage (deferred)
+
+Add later to terminal HUD: today's total tokens/cost, weekly burn,
+breakdown by model/track, '/usage' modal for fuller view. Source data
+is the same JSONL transcripts captured in PF-1.
+
