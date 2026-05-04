@@ -1,0 +1,11 @@
+# ~/.config/adletic/yazi/keymap.toml
+# Custom keys: a = ask Claude about file, e = edit in micro popup
+[[manager.prepend_keymap]]
+on   = "a"
+run  = "shell --confirm 'tmux display-popup -E -w 60 -h 20 ~/.config/adletic/modals/just-ask.sh \"explain this file: %s\"'"
+desc = "Ask Claude about file"
+
+[[manager.prepend_keymap]]
+on   = "e"
+run  = "shell --confirm 'tmux display-popup -E -w 95% -h 95% micro %s'"
+desc = "Edit in micro popup"
