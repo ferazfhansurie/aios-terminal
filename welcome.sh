@@ -354,6 +354,15 @@ fi
 
 cd "$AIOS_HOME_DIR"
 
+# Start inbox notification daemon if not running.
+INBOX_DAEMON="$HOME/.config/adletic/helpers/inbox-daemon.sh"
+INBOX_PID_FILE="$HOME/.cache/adletic/inbox-daemon.pid"
+if [[ -x "$INBOX_DAEMON" ]] && \
+   { [[ ! -f "$INBOX_PID_FILE" ]] || ! kill -0 "$(<"$INBOX_PID_FILE")" 2>/dev/null; }; then
+  nohup "$INBOX_DAEMON" >/dev/null 2>&1 &
+  disown
+fi
+
 # Build the tmux command. Always a NEW session — never attach.
 if [[ -n "$CLAUDE_BIN" ]]; then
   exec tmux -f "$TMUX_CONF" -L adletic new-session -s "$AIOS_SESSION_NAME" \
