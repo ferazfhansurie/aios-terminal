@@ -33,6 +33,55 @@ WHITE=$'\e[38;2;255;255;255m'
 RESET=$'\e[0m'
 BOLD=$'\e[1m'
 
+# ─── Animation primitives ──────────────────────────────────────
+# Skip animations if ADLETIC_NO_ANIM=1 (CI, fast loops).
+# Timeless: pure ANSI cursor escapes + sleep, no external deps.
+
+ANIM=1
+[[ "$ADLETIC_NO_ANIM" == "1" ]] && ANIM=0
+
+anim_sleep_ms() {
+  (( ANIM == 0 )) && return 0
+  local ms=$1
+  # zsh has builtin sleep with sub-second precision (no external sleep needed)
+  sleep "0.$(printf '%03d' "$ms")"
+}
+
+anim_println() {
+  # Print a line, then sleep N ms. Args: <ms> <text>...
+  local ms=$1; shift
+  print -- "$@"
+  anim_sleep_ms "$ms"
+}
+
+anim_typewriter() {
+  # Print text char-by-char with N ms between chars.
+  local ms=$1; shift
+  local text="$*"
+  if (( ANIM == 0 )); then
+    print -- "$text"
+    return
+  fi
+  local i
+  for (( i = 1; i <= ${#text}; i++ )); do
+    print -n -- "${text[$i]}"
+    anim_sleep_ms "$ms"
+  done
+  print
+}
+
+anim_overwrite_line() {
+  # Move cursor up N lines, clear that line, print replacement, move back down.
+  # Args: <lines_up> <text>
+  local up=$1; shift
+  if (( ANIM == 0 )); then
+    return 0
+  fi
+  print -n "\e[${up}A\e[2K\r"
+  print -- "$*"
+  print -n "\e[$((up - 1))B\r"
+}
+
 clear
 print
 print "  ${ORANGE}${BOLD}     █████╗ ██████╗ ██╗     ███████╗████████╗██╗ ██████╗${RESET}"
