@@ -182,47 +182,6 @@ fi
 print "  ${ORANGE_DEEP}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
 print
 
-track_names=()
-if [[ -d "$HOME/.aios/sessions" ]]; then
-  for d in "$HOME"/.aios/sessions/*(/N); do
-    track_names+=("${d:t}")
-  done
-fi
-
-# Per-workspace stagger delay: 10ms when ANIM=1 (zselect floor), 0ms otherwise.
-ws_delay=0
-(( ANIM == 1 )) && ws_delay=10
-
-for name in "${track_names[@]}"; do
-  [[ -z "$name" ]] && continue
-
-  # Resolve state
-  busy=0
-  state="${DIM}✓ idle${RESET}"
-  dot="${DIM}●${RESET}"
-  name_color="${DIM}"
-  if tmux -L adletic has-session -t "$name" 2>/dev/null; then
-    if tmux -L adletic list-panes -s -t "$name" -F '#{pane_current_command}' 2>/dev/null | grep -q '^claude'; then
-      state="${ORANGE_MID}● busy with claude${RESET}"
-      dot="${ORANGE_MID}●${RESET}"
-      name_color="${WHITE}"
-      busy=1
-    fi
-  fi
-  unread=0
-  inbox="$HOME/.aios/sessions/${name}/inbox.jsonl"
-  read_marker="$HOME/.aios/sessions/${name}/inbox.read"
-  if [[ -f "$inbox" ]]; then
-    total=$(wc -l < "$inbox" 2>/dev/null || print 0)
-    rc=0; [[ -f "$read_marker" ]] && rc=$(<"$read_marker")
-    unread=$(( total - rc ))
-  fi
-  (( unread > 0 )) && state="${state} ${YELLOW_FLASH}· ${unread} messages${RESET}"
-
-  anim_println "$ws_delay" "  ${dot} ${name_color}${name}${RESET}  ${DIM}→${RESET}  ${state}"
-done
-
-print
 
 # ─── Interactive session picker ────────────────────────────────
 # fzf list of existing sessions + a "create new" affordance.
@@ -258,12 +217,11 @@ if [[ -z "$AIOS_SESSION_NAME" && "$ADLETIC_SKIP_NAME_PROMPT" != "1" ]] && comman
             busy=1
           fi
         fi
-        local unread=0
+        local unread=0 total=0 rc=0
         local inbox="$HOME/.aios/sessions/${nm}/inbox.jsonl"
         local read_marker="$HOME/.aios/sessions/${nm}/inbox.read"
         if [[ -f "$inbox" ]]; then
-          local total
-          total=$(wc -l < "$inbox" 2>/dev/null || print 0)
+          local total=$(wc -l < "$inbox" 2>/dev/null || print 0)
           local rc=0
           [[ -f "$read_marker" ]] && rc=$(<"$read_marker")
           unread=$(( total - rc ))
@@ -281,8 +239,7 @@ if [[ -z "$AIOS_SESSION_NAME" && "$ADLETIC_SKIP_NAME_PROMPT" != "1" ]] && comman
         fi
 
         # Pad the name to colw visible characters.
-        local padded_name
-        padded_name=$(printf '%-*s' "$colw" "$nm")
+        local padded_name=$(printf '%-*s' "$colw" "$nm")
 
         local row="${dot_color}●${RESET} ${name_color}${padded_name}${RESET}${sep_color}· ${state_text}${RESET}"
         if (( unread > 0 )); then
