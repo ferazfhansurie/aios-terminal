@@ -1,0 +1,7 @@
+{
+  "Ctrl-s": "Save",
+  "Ctrl-q": "Quit",
+  "Ctrl-f": "Find",
+  "Ctrl-h": "Replace",
+  "Ctrl-l": "command-edit:run ~/.config/adletic/helpers/send-to-just-ask.sh"
+}

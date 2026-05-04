@@ -1,0 +1,12 @@
+{
+  "colorscheme": "monokai",
+  "tabsize": 2,
+  "tabstospaces": true,
+  "softwrap": true,
+  "ruler": true,
+  "mouse": true,
+  "scrollbar": true,
+  "savecursor": true,
+  "diffgutter": true,
+  "saveundo": true
+}
