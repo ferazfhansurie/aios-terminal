@@ -1,0 +1,341 @@
+# Adletic terminal — base config
+# MotionBoards design system + AIOS-optimized timeless features.
+# Edit freely; reload = ⌘N or restart (live_config_reload is on for most options).
+
+# ========================================================================
+# Window
+# ========================================================================
+
+[window]
+padding = { x = 12, y = 12 }
+dynamic_padding = true
+decorations = "full"
+opacity = 1.0
+blur = false
+title = "AIOS"
+dynamic_title = true
+option_as_alt = "Both"
+startup_mode = "Windowed"
+
+# ========================================================================
+# Shell — every new Adletic window boots into the welcome banner →
+# Claude Code. Set ADLETIC_SKIP_BOOT=1 in env to skip (e.g. ⌥⌘N below).
+# ========================================================================
+
+[terminal.shell]
+program = "/Users/firazfhansurie/.config/adletic/welcome.sh"
+
+# ========================================================================
+# Font — JetBrains Mono: free, ligature-aware, great box-drawing for
+# Claude Code's TUI.
+# ========================================================================
+
+[font]
+size = 13.0
+builtin_box_drawing = true
+normal      = { family = "JetBrains Mono", style = "Regular" }
+bold        = { family = "JetBrains Mono", style = "Bold" }
+italic      = { family = "JetBrains Mono", style = "Italic" }
+bold_italic = { family = "JetBrains Mono", style = "Bold Italic" }
+
+[font.offset]
+y = 1
+
+# ========================================================================
+# Scrollback — 100k lines, no truncation on long Claude conversations.
+# ========================================================================
+
+[scrolling]
+history = 100000
+multiplier = 3
+
+# ========================================================================
+# Cursor
+# ========================================================================
+
+[cursor]
+style = { shape = "Block", blinking = "Off" }
+unfocused_hollow = true
+thickness = 0.18
+
+# ========================================================================
+# Selection / mouse
+# ========================================================================
+
+[selection]
+save_to_clipboard = true
+
+[mouse]
+hide_when_typing = true
+
+# ========================================================================
+# Bell — visual flash in brand orange (silent).
+# ========================================================================
+
+[bell]
+animation = "EaseOutExpo"
+duration = 100
+color = "#f26522"
+
+# ========================================================================
+# Hints — make Claude Code's URLs and file:line:col references clickable.
+# Single-quoted = TOML literal string (no backslash escaping headaches).
+#
+#   ⌘+click       → open the link/path
+#   ⌃⇧U           → keyboard hint mode for URLs
+#   ⌃⇧O           → keyboard hint mode for file paths
+# ========================================================================
+
+[[hints.enabled]]
+regex = '(ipfs:|ipns:|magnet:|mailto:|gemini://|gopher://|https://|http://|news:|file:|git://|ssh:|ftp://)[^ \t\n\r"`<>{}|^]+'
+hyperlinks = true
+command = "open"
+post_processing = true
+mouse = { enabled = true, mods = "Command|Shift" }
+binding = { key = "U", mods = "Control|Shift" }
+
+[[hints.enabled]]
+# Match any of:
+#   /abs/path/file.ext         → absolute file path
+#   ./relative.ext             → relative path
+#   ~/foo/bar.ext              → home-relative path
+#   src/components/Button.tsx  → bare relative (no leading ./)
+#   any of the above with :line or :line:col suffix
+# Opens in Cursor.
+regex = '(~/|\.{1,2}/|/)?[\w\-./]+\.[\w]+(:\d+(:\d+)?)?'
+command = { program = "open", args = ["-a", "Visual Studio Code"] }
+mouse = { enabled = true, mods = "Command|Shift" }
+binding = { key = "O", mods = "Control|Shift" }
+
+# ========================================================================
+# Keybindings (additions on top of defaults).
+# Defaults: ⌘C copy, ⌘V paste, ⌘N new window, ⌘+/⌘- font, ⌘F search,
+# ⌘Q quit, ⇧⌘Space vi-mode toggle.
+# ========================================================================
+
+[[keyboard.bindings]]
+# ⇧↩ — Shift+Enter sends ESC+CR (Alt-Enter style). Claude Code's TUI
+# treats this as "newline within input" instead of "submit". Works with
+# most readline-based prompts too.
+key = "Return"
+mods = "Shift"
+chars = "\u001b\r"
+
+[[keyboard.bindings]]
+# ⌘K — clear scrollback (parity with iTerm2 / Terminal.app).
+key = "K"
+mods = "Command"
+action = "ClearHistory"
+
+[[keyboard.bindings]]
+# ⌘L — link picker. Captures URLs + file paths from current pane scrollback,
+# fzf-picks, opens (URL → browser, file → VSCode).
+key = "L"
+mods = "Command"
+chars = "\u0001o"
+
+[[keyboard.bindings]]
+# ⇧⌘A — new Adletic window cd'd into your AIOS workspace.
+key = "A"
+mods = "Command|Shift"
+action = "SpawnNewInstance"
+
+[[keyboard.bindings]]
+# ⌥⌘N — raw shell window (skip the boot banner / Claude auto-launch).
+# Useful when you just want zsh.
+key = "N"
+mods = "Command|Alt"
+command = { program = "/Applications/Adletic.app/Contents/MacOS/adletic", args = ["-e", "/bin/zsh", "-l"] }
+
+[[keyboard.bindings]]
+# ⌃⇧F / ⌃⇧B — fast scrollback search.
+key = "F"
+mods = "Control|Shift"
+action = "SearchForward"
+
+[[keyboard.bindings]]
+key = "B"
+mods = "Control|Shift"
+action = "SearchBackward"
+
+# ========================================================================
+# tmux bindings — translate macOS shortcuts → tmux prefix sequences.
+# Prefix is Ctrl-A (^A). Lets you live in tmux without learning prefixes.
+# ========================================================================
+
+# ⌘T — new tmux window
+[[keyboard.bindings]]
+key = "T"
+mods = "Command"
+chars = "\u0001c"
+
+# ⌘[ / ⌘] — prev / next window
+[[keyboard.bindings]]
+key = "LBracket"
+mods = "Command"
+chars = "\u0001p"
+
+[[keyboard.bindings]]
+key = "RBracket"
+mods = "Command"
+chars = "\u0001n"
+
+# ⌘1 .. ⌘9 — jump to window N
+[[keyboard.bindings]]
+key = "Key1"
+mods = "Command"
+chars = "\u00011"
+
+[[keyboard.bindings]]
+key = "Key2"
+mods = "Command"
+chars = "\u00012"
+
+[[keyboard.bindings]]
+key = "Key3"
+mods = "Command"
+chars = "\u00013"
+
+[[keyboard.bindings]]
+key = "Key4"
+mods = "Command"
+chars = "\u00014"
+
+[[keyboard.bindings]]
+key = "Key5"
+mods = "Command"
+chars = "\u00015"
+
+[[keyboard.bindings]]
+key = "Key6"
+mods = "Command"
+chars = "\u00016"
+
+[[keyboard.bindings]]
+key = "Key7"
+mods = "Command"
+chars = "\u00017"
+
+[[keyboard.bindings]]
+key = "Key8"
+mods = "Command"
+chars = "\u00018"
+
+[[keyboard.bindings]]
+key = "Key9"
+mods = "Command"
+chars = "\u00019"
+
+# ⌘D — split pane vertically (side-by-side)
+[[keyboard.bindings]]
+key = "D"
+mods = "Command"
+chars = "\u0001|"
+
+# ⌘⇧D — split pane horizontally (top/bottom)
+[[keyboard.bindings]]
+key = "D"
+mods = "Command|Shift"
+chars = "\u0001-"
+
+# ⌘W — close current pane (NOT the whole window — that's ⌘Q)
+[[keyboard.bindings]]
+key = "W"
+mods = "Command"
+chars = "\u0001x"
+
+# ========================================================================
+# Spawn working directory for ⇧⌘A — point at your main AIOS workspace.
+# ========================================================================
+
+
+# ⌘⇧F — fzf file picker. Sends Prefix+f (Ctrl-A then f) to tmux, popup
+# opens, pick a file, "@/abs/path" gets typed into the active prompt.
+[[keyboard.bindings]]
+key = "F"
+mods = "Command|Shift"
+chars = "\u0001f"
+
+
+# ⌘R — rename current tmux window. Sends Prefix+, → tmux opens a name prompt.
+[[keyboard.bindings]]
+key = "R"
+mods = "Command"
+chars = "\u0001,"
+
+# ⌘⇧R — rename current tmux SESSION via the custom adletic-rename-session
+# helper (updates BOTH tmux session name AND ~/.aios/sessions/<name>/ dir).
+# Sends Prefix+R (Ctrl+A then Shift+R) which invokes `bind R` in tmux.conf.
+[[keyboard.bindings]]
+key = "R"
+mods = "Command|Shift"
+chars = "\u0001R"
+
+[general]
+working_directory = "/Users/firazfhansurie/Repo/firaz/adletic/aios-firaz"
+live_config_reload = true
+
+# ========================================================================
+# Colors — MotionBoards palette
+# (--mb-orange #f26522 hot accent on --mb-dark-body #08131f)
+# ========================================================================
+
+[colors.primary]
+background = "#08131f"
+foreground = "#ffffff"
+
+[colors.cursor]
+text = "#08131f"
+cursor = "#f26522"
+
+[colors.vi_mode_cursor]
+text = "#08131f"
+cursor = "#f26522"
+
+[colors.selection]
+text = "CellForeground"
+background = "#1f2937"
+
+[colors.search.matches]
+foreground = "#08131f"
+background = "#f26522"
+
+[colors.search.focused_match]
+foreground = "#08131f"
+background = "#fbbf24"
+
+[colors.footer_bar]
+foreground = "#ffffff"
+background = "#161b22"
+
+[colors.hints.start]
+foreground = "#08131f"
+background = "#fbbf24"
+
+[colors.hints.end]
+foreground = "#08131f"
+background = "#f26522"
+
+[colors.normal]
+black   = "#0d1117"
+red     = "#ef4444"
+green   = "#10b981"
+yellow  = "#f59e0b"
+blue    = "#6c8eff"
+magenta = "#c084fc"
+cyan    = "#06b6d4"
+white   = "#d1d5db"
+
+[colors.bright]
+black   = "#6b7280"
+red     = "#f87171"
+green   = "#34d399"
+yellow  = "#fbbf24"
+blue    = "#93c5fd"
+magenta = "#d8b4fe"
+cyan    = "#22d3ee"
+white   = "#ffffff"
+
+[[colors.indexed_colors]]
+index = 16
+color = "#f26522"
