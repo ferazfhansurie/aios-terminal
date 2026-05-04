@@ -122,17 +122,45 @@ print
 anim_typewriter 8 "  ${WHITE}AI Operating System${RESET}  ${DIM}·  type ${RESET}${ORANGE_MID}aios${RESET}${DIM} to start Claude in workspace${RESET}"
 print
 
-# Active session count (for awareness, not auto-attach).
-if [[ -x "$AIOS_BIN" ]]; then
-  ACTIVE_COUNT=$("$AIOS_BIN" list 2>/dev/null | grep -E "active · " | sed -E 's/.*([0-9]+) active.*/\1/' | head -1)
-  if [[ -n "$ACTIVE_COUNT" && "$ACTIVE_COUNT" -gt 0 ]]; then
-    print "  ${DIM}${ACTIVE_COUNT} other session(s) active — ${RESET}${ORANGE}adletic list${RESET}${DIM} to view${RESET}"
-    print
-  fi
+# Per-track scan — animates as it resolves each track's status.
+print "  ${DIM}scanning tracks…${RESET}"
+print
+
+track_names=()
+if [[ -d "$HOME/.aios/sessions" ]]; then
+  for d in "$HOME"/.aios/sessions/*(/N); do
+    track_names+=("${d:t}")
+  done
 fi
 
-# Brief settle on the banner.
-sleep 0.5
+for name in "${track_names[@]}"; do
+  [[ -z "$name" ]] && continue
+  # Print hollow circle first
+  print "  ${DIM}◌${RESET} ${name}"
+  anim_sleep_ms 80
+
+  # Resolve state
+  state="${DIM}✓ idle${RESET}"
+  if tmux -L adletic has-session -t "$name" 2>/dev/null; then
+    if tmux -L adletic list-panes -s -t "$name" -F '#{pane_current_command}' 2>/dev/null | grep -q '^claude'; then
+      state="${ORANGE_MID}● active claude${RESET}"
+    fi
+  fi
+  unread=0
+  inbox="$HOME/.aios/sessions/${name}/inbox.jsonl"
+  read_marker="$HOME/.aios/sessions/${name}/inbox.read"
+  if [[ -f "$inbox" ]]; then
+    total=$(wc -l < "$inbox" 2>/dev/null || print 0)
+    rc=0; [[ -f "$read_marker" ]] && rc=$(<"$read_marker")
+    unread=$(( total - rc ))
+  fi
+  (( unread > 0 )) && state="${state} ${YELLOW_FLASH}· ${unread} unread${RESET}"
+
+  # Overwrite the hollow row with the resolved one
+  anim_overwrite_line 1 "  ${ORANGE_MID}●${RESET} ${name}  ${DIM}→${RESET}  ${state}"
+done
+
+print
 
 # ─── Pick a session name (or attach to an existing one) ────────
 # If $AIOS_SESSION_NAME is set externally (e.g. spawned via adletic
