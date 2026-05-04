@@ -185,9 +185,13 @@ print
 
 # ─── Interactive session picker ────────────────────────────────
 # fzf list of existing sessions + a "create new" affordance.
-# Bindings: enter=attach, ctrl-n=new, ctrl-d=delete, esc=plain shell.
+# Bindings: enter=attach, ctrl-n=new, ctrl-r=retarget folder,
+# ctrl-d=delete, esc=plain shell.
 #
 # Override knob: ADLETIC_SKIP_NAME_PROMPT=1 skips the picker entirely.
+[[ -r "$HOME/.config/adletic/helpers/instances.sh" ]] && \
+  source "$HOME/.config/adletic/helpers/instances.sh"
+
 if [[ -z "$AIOS_SESSION_NAME" && "$ADLETIC_SKIP_NAME_PROMPT" != "1" ]] && command -v fzf >/dev/null 2>&1; then
 
   # One-line invitation above the picker.
@@ -244,6 +248,12 @@ if [[ -z "$AIOS_SESSION_NAME" && "$ADLETIC_SKIP_NAME_PROMPT" != "1" ]] && comman
         if (( unread > 0 )); then
           row="${row} ${DIM}·${RESET} ${YELLOW_FLASH}${unread} messages${RESET}"
         fi
+        # Append the workspace folder, dim. Show ~/ prefix when under $HOME.
+        if typeset -f aios_get_path >/dev/null 2>&1; then
+          local cwd; cwd=$(aios_get_path "$nm")
+          local display="${cwd/#$HOME/~}"
+          row="${row}   ${DIM}${display}${RESET}"
+        fi
         print -- "$row"
       done
     fi
@@ -252,9 +262,9 @@ if [[ -z "$AIOS_SESSION_NAME" && "$ADLETIC_SKIP_NAME_PROMPT" != "1" ]] && comman
   picker_choice=$(build_picker_lines | fzf --ansi \
     --height=60% --reverse --no-info --prompt="❯ " \
     --pointer="❯" --color="pointer:#f26522,prompt:#f26522,fg+:#ffffff,bg+:#0d1117" \
-    --header=$'\n↑↓ navigate   enter open   ctrl-n new   ctrl-d remove   esc skip\n' \
+    --header=$'\n↑↓ navigate   enter open   ctrl-n new   ctrl-r retarget   ctrl-d remove   esc skip\n' \
     --header-first \
-    --expect=ctrl-n,ctrl-d,esc \
+    --expect=ctrl-n,ctrl-r,ctrl-d,esc \
     --bind="esc:abort")
 
   if [[ -z "$picker_choice" ]]; then
@@ -281,6 +291,15 @@ if [[ -z "$AIOS_SESSION_NAME" && "$ADLETIC_SKIP_NAME_PROMPT" != "1" ]] && comman
       read -r new_name
       [[ -z "$new_name" ]] && exec /bin/zsh -l
       AIOS_SESSION_NAME="$new_name" exec "$AIOS_BIN" new "$new_name"
+      ;;
+    ctrl-r)
+      # Retarget the highlighted workspace's folder via picker.
+      [[ "$selection_plain" == *"new workspace"* ]] && exec "$0"
+      [[ -z "$selection_name" ]] && exec "$0"
+      "$AIOS_BIN" cd "$selection_name"
+      print "  press any key…"
+      read -k1 -s
+      exec "$0"   # refresh
       ;;
     ctrl-d)
       [[ "$selection_plain" == *"new workspace"* ]] && exec "$0"
