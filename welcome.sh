@@ -83,15 +83,43 @@ anim_overwrite_line() {
 }
 
 clear
+# Banner — 6 lines, staggered 50ms apart, gradient orange.
+ORANGE_DEEP=$'\e[38;2;204;82;28m'
+ORANGE_MID=$'\e[38;2;242;101;34m'
+ORANGE_HOT=$'\e[38;2;253;132;57m'
+YELLOW_FLASH=$'\e[38;2;251;191;36m'
+
+banner_lines=(
+  "  ${ORANGE_DEEP}${BOLD}     █████╗ ██████╗ ██╗     ███████╗████████╗██╗ ██████╗${RESET}"
+  "  ${ORANGE_DEEP}${BOLD}    ██╔══██╗██╔══██╗██║     ██╔════╝╚══██╔══╝██║██╔════╝${RESET}"
+  "  ${ORANGE_MID}${BOLD}    ███████║██║  ██║██║     █████╗     ██║   ██║██║     ${RESET}"
+  "  ${ORANGE_MID}${BOLD}    ██╔══██║██║  ██║██║     ██╔══╝     ██║   ██║██║     ${RESET}"
+  "  ${ORANGE_HOT}${BOLD}    ██║  ██║██████╔╝███████╗███████╗   ██║   ██║╚██████╗${RESET}"
+  "  ${ORANGE_HOT}${BOLD}    ╚═╝  ╚═╝╚═════╝ ╚══════╝╚══════╝   ╚═╝   ╚═╝ ╚═════╝${RESET}"
+)
 print
-print "  ${ORANGE}${BOLD}     █████╗ ██████╗ ██╗     ███████╗████████╗██╗ ██████╗${RESET}"
-print "  ${ORANGE}${BOLD}    ██╔══██╗██╔══██╗██║     ██╔════╝╚══██╔══╝██║██╔════╝${RESET}"
-print "  ${ORANGE}${BOLD}    ███████║██║  ██║██║     █████╗     ██║   ██║██║     ${RESET}"
-print "  ${ORANGE}${BOLD}    ██╔══██║██║  ██║██║     ██╔══╝     ██║   ██║██║     ${RESET}"
-print "  ${ORANGE}${BOLD}    ██║  ██║██████╔╝███████╗███████╗   ██║   ██║╚██████╗${RESET}"
-print "  ${ORANGE}${BOLD}    ╚═╝  ╚═╝╚═════╝ ╚══════╝╚══════╝   ╚═╝   ╚═╝ ╚═════╝${RESET}"
+for line in "${banner_lines[@]}"; do
+  anim_println 50 "$line"
+done
+
+# Flash: redraw banner in yellow, hold 60ms, redraw in orange.
+if (( ANIM == 1 )); then
+  print -n "\e[6A"            # cursor up 6 lines
+  for line in "${banner_lines[@]}"; do
+    yellow_line="${line//$ORANGE_DEEP/$YELLOW_FLASH}"
+    yellow_line="${yellow_line//$ORANGE_MID/$YELLOW_FLASH}"
+    yellow_line="${yellow_line//$ORANGE_HOT/$YELLOW_FLASH}"
+    print -- "$yellow_line"
+  done
+  anim_sleep_ms 60
+  print -n "\e[6A"
+  for line in "${banner_lines[@]}"; do
+    print -- "$line"
+  done
+fi
+
 print
-print "  ${WHITE}AI Operating System${RESET}  ${DIM}·  type ${RESET}${ORANGE}aios${RESET}${DIM} to start Claude in workspace${RESET}"
+anim_typewriter 8 "  ${WHITE}AI Operating System${RESET}  ${DIM}·  type ${RESET}${ORANGE_MID}aios${RESET}${DIM} to start Claude in workspace${RESET}"
 print
 
 # Active session count (for awareness, not auto-attach).
