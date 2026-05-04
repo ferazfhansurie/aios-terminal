@@ -289,6 +289,12 @@ key = "P"
 mods = "Command"
 chars = "\u0001P"  # bound in tmux.conf
 
+# ⌘/ — Cheatsheet
+[[keyboard.bindings]]
+key = "Slash"
+mods = "Command"
+chars = "\u0001/"  # bound in tmux.conf
+
 # ⌘J — Just-ask (claude popup)
 [[keyboard.bindings]]
 key = "J"
