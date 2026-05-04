@@ -33,8 +33,11 @@ if [[ -f "$CACHE" ]]; then
 fi
 
 read_claude_cost() {
-  # Returns three space-separated fields: model in_tokens out_tokens
-  # Or returns empty if no transcript exists for the current cwd.
+  # Returns space-separated: model session_in session_out ctx_used
+  #   session_in/out → cumulative across the whole transcript (session size)
+  #   ctx_used       → token count active in the LATEST assistant turn (the
+  #                    number that matters for "how full is the window")
+  # Empty when no transcript exists for the current cwd.
   local encoded proj_dir latest
   encoded="${cwd//\//-}"   # replace / with -
   encoded="${encoded#-}"   # strip leading -
@@ -48,6 +51,7 @@ read_claude_cost() {
 import json, sys, pathlib
 p = pathlib.Path(sys.argv[1])
 model, in_t, out_t = "", 0, 0
+last_ctx = 0
 try:
     text = p.read_text(errors="ignore")
 except Exception:
@@ -71,12 +75,15 @@ for line in text.splitlines():
     u = msg.get("usage", {})
     if not isinstance(u, dict):
         continue
-    in_t += int(u.get("input_tokens", 0) or 0)
-    in_t += int(u.get("cache_creation_input_tokens", 0) or 0)
-    in_t += int(u.get("cache_read_input_tokens", 0) or 0)
-    out_t += int(u.get("output_tokens", 0) or 0)
+    cur_in = int(u.get("input_tokens", 0) or 0) \
+           + int(u.get("cache_creation_input_tokens", 0) or 0) \
+           + int(u.get("cache_read_input_tokens", 0) or 0)
+    cur_out = int(u.get("output_tokens", 0) or 0)
+    in_t += cur_in
+    out_t += cur_out
+    last_ctx = cur_in + cur_out
 if model:
-    print(f"{model} {in_t} {out_t}")
+    print(f"{model} {in_t} {out_t} {last_ctx}")
 PY
 }
 
@@ -87,28 +94,59 @@ if [[ -z "$raw" ]]; then
   exit 0
 fi
 
-read_model="${raw%% *}"
-rest="${raw#* }"
-in_toks="${rest%% *}"
-out_toks="${rest##* }"
+typeset -a _f
+_f=(${=raw})
+read_model="${_f[1]}"
+in_toks="${_f[2]}"
+out_toks="${_f[3]}"
+ctx_used="${_f[4]:-0}"
 
 if [[ -z "$read_model" || -z "$in_toks" || -z "$out_toks" ]]; then
   print -n -- "" >| "$CACHE"
   exit 0
 fi
 
-# Format token count: 12400 -> 12.4k
-total_toks=$(( in_toks + out_toks ))
-if (( total_toks >= 1000 )); then
-  toks_fmt=$(awk -v t="$total_toks" 'BEGIN{printf "%.1fk", t/1000}')
+fmt_toks() {
+  local n=$1
+  if (( n >= 1000000 )); then
+    awk -v t="$n" 'BEGIN{printf "%.1fM", t/1000000}'
+  elif (( n >= 1000 )); then
+    awk -v t="$n" 'BEGIN{printf "%.1fk", t/1000}'
+  else
+    print -- "$n"
+  fi
+}
+
+# Context window. Default to 1M for Opus 4.x (the 1M-context variants are
+# what we run); 200k otherwise. The model field in JSONL doesn't carry a
+# "1m" suffix, so we infer from the family. Override via $ADLETIC_CONTEXT_MAX.
+if [[ -n "${ADLETIC_CONTEXT_MAX:-}" ]]; then
+  ctx_max="$ADLETIC_CONTEXT_MAX"
+elif [[ "$read_model" == claude-opus-4-* ]]; then
+  ctx_max=1000000
 else
-  toks_fmt="${total_toks}"
+  ctx_max=200000
+fi
+ctx_max_fmt=$(fmt_toks "$ctx_max")
+ctx_used_fmt=$(fmt_toks "$ctx_used")
+
+ctx_pct=$(awk -v c="$ctx_used" -v m="$ctx_max" 'BEGIN{p=(m>0)?(c*100/m):0; if(p>100)p=100; printf "%d", p}')
+filled=$(( ctx_pct / 10 ))
+(( filled > 10 )) && filled=10
+empty=$(( 10 - filled ))
+bar=""
+for ((i=0; i<filled; i++)); do bar="${bar}▰"; done
+for ((i=0; i<empty;  i++)); do bar="${bar}▱"; done
+if (( ctx_pct >= 70 )); then
+  bar_seg="#[fg=#f26522]${bar} ${ctx_pct}%#[fg=#a0a0a0]"
+else
+  bar_seg="#[fg=#666666]${bar} #[fg=#a0a0a0]${ctx_pct}%"
 fi
 
-usd=$("$HOME/.config/adletic/helpers/pricing.sh" "$read_model" "$in_toks" "$out_toks" 2>/dev/null || print 0)
-fx=$("$HOME/.config/adletic/helpers/fx.sh" 2>/dev/null || print 4.70)
-myr=$(awk -v u="$usd" -v f="$fx" 'BEGIN{printf "%.2f", u*f}')
-
-out="${read_model} · ${toks_fmt} tok · \$${usd} · RM${myr}"
+# Display: model · used/max · bar pct
+# `used` = tokens consumed by the most recent assistant turn (active context).
+# Cumulative session tokens are intentionally NOT shown — with prompt caching
+# they balloon into tens of millions and don't reflect anything actionable.
+out="${read_model} · ${ctx_used_fmt}/${ctx_max_fmt} · ${bar_seg}"
 print -n -- "$out" >| "$CACHE"
 print -- "$out"
