@@ -249,8 +249,12 @@ if [[ -z "$AIOS_SESSION_NAME" && "$ADLETIC_SKIP_NAME_PROMPT" != "1" ]] && comman
           row="${row} ${DIM}·${RESET} ${YELLOW_FLASH}${unread} messages${RESET}"
         fi
         # Append the workspace folder, dim. Show ~/ prefix when under $HOME.
+        # IMPORTANT: combine `local` with assignment. A bare `local cwd;` on
+        # the second-and-later loop iterations triggers zsh typeset's
+        # declare-or-print dual behavior, echoing `cwd=<previous value>` to
+        # stdout — which fzf then renders as a phantom selectable row.
         if typeset -f aios_get_path >/dev/null 2>&1; then
-          local cwd; cwd=$(aios_get_path "$nm")
+          local cwd=$(aios_get_path "$nm")
           local display="${cwd/#$HOME/~}"
           row="${row}   ${DIM}${display}${RESET}"
         fi
