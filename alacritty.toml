@@ -18,12 +18,18 @@ option_as_alt = "Both"
 startup_mode = "Windowed"
 
 # ========================================================================
-# Shell — every new Adletic window boots into the welcome banner →
-# Claude Code. Set ADLETIC_SKIP_BOOT=1 in env to skip (e.g. ⌥⌘N below).
+# Shell — ⌘N opens a plain login zsh. The AIOS welcome flow (banner →
+# tmux → Claude) is gated behind typing `aios` in the shell. The terminal
+# stays honest as a terminal; AIOS is a tool you invoke, not an
+# unavoidable startup screen.
+#
+# To bypass the wrapper and open AIOS directly in a new window, use ⌥⌘N
+# (configured below).
 # ========================================================================
 
 [terminal.shell]
-program = "/Users/firazfhansurie/.config/adletic/welcome.sh"
+program = "/bin/zsh"
+args = ["-l"]
 
 # ========================================================================
 # Font — JetBrains Mono: free, ligature-aware, great box-drawing for
@@ -141,11 +147,12 @@ mods = "Command|Shift"
 action = "SpawnNewInstance"
 
 [[keyboard.bindings]]
-# ⌥⌘N — raw shell window (skip the boot banner / Claude auto-launch).
-# Useful when you just want zsh.
+# ⌥⌘N — open a new window directly into the AIOS welcome flow (banner +
+# tmux + Claude). ⌘N is plain zsh; this is the inverse for when you know
+# you want AIOS without typing `aios` first.
 key = "N"
 mods = "Command|Alt"
-command = { program = "/Applications/Adletic.app/Contents/MacOS/adletic", args = ["-e", "/bin/zsh", "-l"] }
+command = { program = "/Applications/Adletic.app/Contents/MacOS/adletic", args = ["-e", "/Users/firazfhansurie/.config/adletic/welcome.sh"] }
 
 [[keyboard.bindings]]
 # ⌃⇧F / ⌃⇧B — fast scrollback search.
