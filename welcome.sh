@@ -130,64 +130,8 @@ banner_lines=(
   "  ${ORANGE_HOT}${BOLD}╚═╝  ╚═╝╚═╝  ╚═════╝ ╚══════╝${RESET}"
 )
 
-# Mascot: 6 rows tall, sits to the right of the AIOS wordmark.
-#
-# Primary path: render assets/mascot.png via chafa (truecolor block art),
-# cached to ~/.cache/adletic/mascot.ansi and regenerated when the PNG is
-# newer than the cache. Cached render = instant subsequent boots.
-#
-# Fallback: hand-drawn ANSI mascot used when chafa is missing or the PNG
-# can't be read. Same shape (6 rows) so banner alignment is preserved.
-PAD="    "
-ASSET_PATH="$HOME/.config/adletic/assets/mascot.png"
-CACHE_DIR="$HOME/.cache/adletic"
-CACHE_PATH="$CACHE_DIR/mascot.ansi"
-mkdir -p "$CACHE_DIR" 2>/dev/null
-
-mascot_lines=()
-if command -v chafa >/dev/null 2>&1 && [[ -f "$ASSET_PATH" ]]; then
-  # Two-stage cache:
-  #   1. mascot-trimmed.png — source PNG with dark cosmic bg fuzzy-trimmed
-  #      to a tight bounding box (via ImageMagick when available).
-  #      Without trimming, chafa averages the starry background into every
-  #      cell and the mascot collapses into a blob at small sizes.
-  #   2. mascot.ansi — chafa's truecolor block render of the trimmed PNG.
-  TRIMMED_PATH="$CACHE_DIR/mascot-trimmed.png"
-  CHAFA_INPUT="$ASSET_PATH"
-  if command -v magick >/dev/null 2>&1; then
-    if [[ ! -s "$TRIMMED_PATH" ]] || [[ "$ASSET_PATH" -nt "$TRIMMED_PATH" ]]; then
-      magick "$ASSET_PATH" -fuzz 25% -transparent '#08131f' -trim +repage \
-        "$TRIMMED_PATH" 2>/dev/null
-    fi
-    [[ -s "$TRIMMED_PATH" ]] && CHAFA_INPUT="$TRIMMED_PATH"
-  fi
-
-  if [[ ! -s "$CACHE_PATH" ]] || [[ "$CHAFA_INPUT" -nt "$CACHE_PATH" ]]; then
-    # Strip cursor-hide/show sequences chafa emits — they conflict with
-    # welcome.sh's own cursor positioning during the flash animation.
-    chafa --size=16x6 --symbols=vhalf+block --colors=truecolor \
-          --bg='#08131f' "$CHAFA_INPUT" 2>/dev/null \
-      | sed -E $'s/\x1b\\[\\?25[lh]//g' > "$CACHE_PATH"
-  fi
-  if [[ -s "$CACHE_PATH" ]]; then
-    while IFS= read -r _line; do
-      mascot_lines+=("$_line")
-    done < "$CACHE_PATH"
-  fi
-fi
-
-if (( ${#mascot_lines[@]} == 0 )); then
-  # Fallback ANSI mascot — box outline orange, eyes/smile white,
-  # lightning yellow, legs hot orange.
-  mascot_lines=(
-    ""
-    "${ORANGE_MID}┌───────┐${RESET}"
-    "${ORANGE_MID}│${RESET} ${WHITE}◣${RESET}   ${WHITE}◢${RESET} ${ORANGE_MID}│${RESET}  ${YELLOW_FLASH}⚡${RESET}"
-    "${ORANGE_MID}│${RESET}   ${WHITE}◡${RESET}   ${ORANGE_MID}│${RESET}"
-    "${ORANGE_MID}└───────┘${RESET}"
-    "  ${ORANGE_HOT}▌${RESET}   ${ORANGE_HOT}▐${RESET}"
-  )
-fi
+# Mascot removed — banner stands alone. Less visual noise; the AIOS
+# wordmark carries identity by itself.
 
 # Banner stagger delay: 15ms when ANIM=1 (rounds to 20ms via zselect), 0ms otherwise.
 banner_delay=0
@@ -195,11 +139,10 @@ banner_delay=0
 
 print
 for (( bi = 1; bi <= ${#banner_lines[@]}; bi++ )); do
-  anim_println "$banner_delay" "${banner_lines[$bi]}${PAD}${mascot_lines[$bi]}"
+  anim_println "$banner_delay" "${banner_lines[$bi]}"
 done
 
 # Flash: redraw banner in yellow, hold 40ms, redraw in orange.
-# Only the banner cells flash — mascot stays put.
 if (( ANIM == 1 )); then
   print -n "\e[6A"            # cursor up 6 lines
   for (( bi = 1; bi <= ${#banner_lines[@]}; bi++ )); do
@@ -212,7 +155,7 @@ if (( ANIM == 1 )); then
   anim_sleep_ms 40
   print -n "\e[6A"
   for (( bi = 1; bi <= ${#banner_lines[@]}; bi++ )); do
-    print -- "${banner_lines[$bi]}${PAD}${mascot_lines[$bi]}"
+    print -- "${banner_lines[$bi]}"
   done
 fi
 
