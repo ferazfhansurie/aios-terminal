@@ -130,17 +130,47 @@ banner_lines=(
   "  ${ORANGE_HOT}${BOLD}╚═╝  ╚═╝╚═╝  ╚═════╝ ╚══════╝${RESET}"
 )
 
-# Mascot: 6 rows (1 blank top to align vertically with banner).
-# Box outline orange, eyes/smile white, lightning yellow, legs hot orange.
+# Mascot: 6 rows tall, sits to the right of the AIOS wordmark.
+#
+# Primary path: render assets/mascot.png via chafa (truecolor block art),
+# cached to ~/.cache/adletic/mascot.ansi and regenerated when the PNG is
+# newer than the cache. Cached render = instant subsequent boots.
+#
+# Fallback: hand-drawn ANSI mascot used when chafa is missing or the PNG
+# can't be read. Same shape (6 rows) so banner alignment is preserved.
 PAD="    "
-mascot_lines=(
-  ""
-  "${ORANGE_MID}┌───────┐${RESET}"
-  "${ORANGE_MID}│${RESET} ${WHITE}◣${RESET}   ${WHITE}◢${RESET} ${ORANGE_MID}│${RESET}  ${YELLOW_FLASH}⚡${RESET}"
-  "${ORANGE_MID}│${RESET}   ${WHITE}◡${RESET}   ${ORANGE_MID}│${RESET}"
-  "${ORANGE_MID}└───────┘${RESET}"
-  "  ${ORANGE_HOT}▌${RESET}   ${ORANGE_HOT}▐${RESET}"
-)
+ASSET_PATH="$HOME/.config/adletic/assets/mascot.png"
+CACHE_DIR="$HOME/.cache/adletic"
+CACHE_PATH="$CACHE_DIR/mascot.ansi"
+mkdir -p "$CACHE_DIR" 2>/dev/null
+
+mascot_lines=()
+if command -v chafa >/dev/null 2>&1 && [[ -f "$ASSET_PATH" ]]; then
+  if [[ ! -s "$CACHE_PATH" ]] || [[ "$ASSET_PATH" -nt "$CACHE_PATH" ]]; then
+    # Strip cursor-hide/show sequences chafa emits — they conflict with
+    # welcome.sh's own cursor positioning during the flash animation.
+    chafa --size=14x6 --symbols=block --colors=truecolor "$ASSET_PATH" 2>/dev/null \
+      | sed -E $'s/\x1b\\[\\?25[lh]//g' > "$CACHE_PATH"
+  fi
+  if [[ -s "$CACHE_PATH" ]]; then
+    while IFS= read -r _line; do
+      mascot_lines+=("$_line")
+    done < "$CACHE_PATH"
+  fi
+fi
+
+if (( ${#mascot_lines[@]} == 0 )); then
+  # Fallback ANSI mascot — box outline orange, eyes/smile white,
+  # lightning yellow, legs hot orange.
+  mascot_lines=(
+    ""
+    "${ORANGE_MID}┌───────┐${RESET}"
+    "${ORANGE_MID}│${RESET} ${WHITE}◣${RESET}   ${WHITE}◢${RESET} ${ORANGE_MID}│${RESET}  ${YELLOW_FLASH}⚡${RESET}"
+    "${ORANGE_MID}│${RESET}   ${WHITE}◡${RESET}   ${ORANGE_MID}│${RESET}"
+    "${ORANGE_MID}└───────┘${RESET}"
+    "  ${ORANGE_HOT}▌${RESET}   ${ORANGE_HOT}▐${RESET}"
+  )
+fi
 
 # Banner stagger delay: 15ms when ANIM=1 (rounds to 20ms via zselect), 0ms otherwise.
 banner_delay=0
