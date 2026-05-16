@@ -22,3 +22,15 @@
 - `⌘T` new window · `⌘[/]` prev/next · `⌘1–9` jump
 - `⌘D` split vertical · `⌘⇧D` split horizontal · `⌘W` close pane
 - `⌘R` rename window · `⌘⇧R` rename session
+
+## Split panes (see multiple Claude sessions at once)
+
+| Keybinding | What it does |
+|---|---|
+| `prefix \|` | Split current pane horizontally (side-by-side) |
+| `prefix -` | Split current pane vertically (top + bottom) |
+| `prefix h/j/k/l` | Navigate left/down/up/right between panes |
+| `prefix H/J/K/L` | Resize current pane (hold prefix, tap multiple times) |
+| `prefix z` | Zoom current pane to fullscreen / toggle back |
+| `prefix g` | **Grid view** — collect all running Claude sessions into one tiled window |
+| `prefix S` | Sync input across all panes in window (toggle) |
