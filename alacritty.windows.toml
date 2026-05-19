@@ -1,0 +1,194 @@
+# Adletic terminal — Windows config (Git Bash backend).
+# Sister file to alacritty.toml (macOS). Mirrors the MotionBoards look + AIOS-on-launch flow
+# without zsh, /Applications paths, Cmd keybindings, or tmux dependency.
+#
+# Install path on Windows: %APPDATA%\alacritty\alacritty.toml (copy or symlink this file there).
+
+# ========================================================================
+# Window
+# ========================================================================
+
+[window]
+padding = { x = 12, y = 12 }
+dynamic_padding = true
+decorations = "full"
+opacity = 1.0
+blur = false
+title = "AIOS"
+dynamic_title = true
+startup_mode = "Windowed"
+
+# ========================================================================
+# Shell — Git Bash --login runs welcome.bash, prints AIOS banner, then drops
+# into an interactive bash. User types `aios` to launch the menu.
+# ========================================================================
+
+[terminal.shell]
+program = "C:\\Program Files\\Git\\bin\\bash.exe"
+args    = ["--login", "-i", "-c", "exec bash --rcfile ~/.config/adletic/welcome.bash"]
+
+# ========================================================================
+# Font — JetBrains Mono if installed (recommended), Cascadia Code as fallback.
+# Alacritty falls through automatically if the primary isn't present.
+# ========================================================================
+
+[font]
+size = 12.0
+builtin_box_drawing = true
+normal      = { family = "JetBrains Mono", style = "Regular" }
+bold        = { family = "JetBrains Mono", style = "Bold" }
+italic      = { family = "JetBrains Mono", style = "Italic" }
+bold_italic = { family = "JetBrains Mono", style = "Bold Italic" }
+
+[font.offset]
+y = 1
+
+# ========================================================================
+# Scrollback / cursor / selection / mouse / bell
+# ========================================================================
+
+[scrolling]
+history    = 100000
+multiplier = 3
+
+[cursor]
+style            = { shape = "Block", blinking = "Off" }
+unfocused_hollow = true
+thickness        = 0.18
+
+[selection]
+save_to_clipboard = true
+
+[mouse]
+hide_when_typing = true
+
+[bell]
+animation = "EaseOutExpo"
+duration  = 100
+color     = "#f26522"
+
+# ========================================================================
+# Keybindings — Ctrl variants of the mac Cmd shortcuts. Minimal v1 set
+# (no tmux integration yet — adding tmux to MSYS2 is a separate phase).
+# ========================================================================
+
+[[keyboard.bindings]]
+# Shift+Enter → newline (Claude Code TUI compatibility).
+key   = "Return"
+mods  = "Shift"
+chars = "\r"
+
+[[keyboard.bindings]]
+# Ctrl+K → clear scrollback.
+key    = "K"
+mods   = "Control"
+action = "ClearHistory"
+
+[[keyboard.bindings]]
+# Ctrl+Shift+F / B → fast scrollback search.
+key    = "F"
+mods   = "Control|Shift"
+action = "SearchForward"
+
+[[keyboard.bindings]]
+key    = "B"
+mods   = "Control|Shift"
+action = "SearchBackward"
+
+[[keyboard.bindings]]
+# Ctrl+Shift+N → spawn another Adletic window.
+key    = "N"
+mods   = "Control|Shift"
+action = "SpawnNewInstance"
+
+# ========================================================================
+# Hints — clickable URLs open in default browser via `cmd /c start`.
+# File paths open in VSCode if installed (fallback: explorer).
+# ========================================================================
+
+[[hints.enabled]]
+regex          = '(https?://|ipfs:|magnet:|mailto:|file:|ftp://|git://|ssh:)[^ \t\n\r"`<>{}|^]+'
+hyperlinks     = true
+command        = { program = "cmd", args = ["/c", "start"] }
+post_processing = true
+mouse          = { enabled = true, mods = "Control|Shift" }
+binding        = { key = "U", mods = "Control|Shift" }
+
+[[hints.enabled]]
+# File-path-like regex — open with code (VS Code). Falls back silently if `code` not on PATH.
+regex   = '(~/|\.{1,2}/|/)?[\w\-./]+\.[\w]+(:\d+(:\d+)?)?'
+command = { program = "code", args = [] }
+mouse   = { enabled = true, mods = "Control|Shift" }
+binding = { key = "O", mods = "Control|Shift" }
+
+# ========================================================================
+# General
+# ========================================================================
+
+[general]
+live_config_reload = true
+
+# ========================================================================
+# Colors — MotionBoards palette (matches the mac config exactly so brand
+# feel is consistent across platforms).
+# ========================================================================
+
+[colors.primary]
+background = "#08131f"
+foreground = "#ffffff"
+
+[colors.cursor]
+text   = "#08131f"
+cursor = "#f26522"
+
+[colors.vi_mode_cursor]
+text   = "#08131f"
+cursor = "#f26522"
+
+[colors.selection]
+text       = "CellForeground"
+background = "#1f2937"
+
+[colors.search.matches]
+foreground = "#08131f"
+background = "#f26522"
+
+[colors.search.focused_match]
+foreground = "#08131f"
+background = "#fbbf24"
+
+[colors.footer_bar]
+foreground = "#ffffff"
+background = "#161b22"
+
+[colors.hints.start]
+foreground = "#08131f"
+background = "#fbbf24"
+
+[colors.hints.end]
+foreground = "#08131f"
+background = "#f26522"
+
+[colors.normal]
+black   = "#0d1117"
+red     = "#ef4444"
+green   = "#10b981"
+yellow  = "#f59e0b"
+blue    = "#6c8eff"
+magenta = "#c084fc"
+cyan    = "#06b6d4"
+white   = "#d1d5db"
+
+[colors.bright]
+black   = "#6b7280"
+red     = "#f87171"
+green   = "#34d399"
+yellow  = "#fbbf24"
+blue    = "#93c5fd"
+magenta = "#d8b4fe"
+cyan    = "#22d3ee"
+white   = "#ffffff"
+
+[[colors.indexed_colors]]
+index = 16
+color = "#f26522"
