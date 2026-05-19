@@ -1,5 +1,13 @@
 *.log
 *.pid
+*.bak
 .DS_Store
 tmux-plugins/
 micro/buffers/
+
+# Personal bookmarks — keep local, ships as .example.
+helpers/browser-bookmarks.sh
+quick-launcher.conf
+
+# Personal launcher/cron state
+.config-state/

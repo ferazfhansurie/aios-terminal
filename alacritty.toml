@@ -97,7 +97,7 @@ regex = '(ipfs:|ipns:|magnet:|mailto:|gemini://|gopher://|https://|http://|news:
 hyperlinks = true
 command = "open"
 post_processing = true
-mouse = { enabled = true, mods = "Command|Shift" }
+mouse = { enabled = true, mods = "Command" }
 binding = { key = "U", mods = "Control|Shift" }
 
 [[hints.enabled]]
@@ -107,10 +107,12 @@ binding = { key = "U", mods = "Control|Shift" }
 #   ~/foo/bar.ext              → home-relative path
 #   src/components/Button.tsx  → bare relative (no leading ./)
 #   any of the above with :line or :line:col suffix
-# Opens in Cursor.
+# Opens in VS Code. ⌘+click — no shift required.
 regex = '(~/|\.{1,2}/|/)?[\w\-./]+\.[\w]+(:\d+(:\d+)?)?'
+hyperlinks = true
+post_processing = true
 command = { program = "open", args = ["-a", "Visual Studio Code"] }
-mouse = { enabled = true, mods = "Command|Shift" }
+mouse = { enabled = true, mods = "Command" }
 binding = { key = "O", mods = "Control|Shift" }
 
 # ========================================================================
@@ -147,12 +149,19 @@ mods = "Command|Shift"
 action = "SpawnNewInstance"
 
 [[keyboard.bindings]]
-# ⌥⌘N — open a new window directly into the AIOS welcome flow (banner +
-# tmux + Claude). ⌘N is plain zsh; this is the inverse for when you know
-# you want AIOS without typing `aios` first.
+# ⇧⌘N — open a new Adletic window directly into the AIOS menu.
+# Launches a tmux-wrapped `aios-cli` so the status bar + split panes
+# are active from the first frame. The cleanest "new aios" hotkey.
+key = "N"
+mods = "Command|Shift"
+command = { program = "/Applications/AIOS.app/Contents/MacOS/adletic", args = ["-e", "/bin/zsh", "-i", "-c", "exec tmux -L adletic -f \"$HOME/.config/adletic/tmux.conf\" new-session -s \"aios-$$\" \"$HOME/.local/bin/aios-cli\""] }
+
+[[keyboard.bindings]]
+# ⌥⌘N — old AIOS welcome flow (banner + tmux + raw zsh). Kept for muscle
+# memory; new flow is ⇧⌘N above.
 key = "N"
 mods = "Command|Alt"
-command = { program = "/Applications/Adletic.app/Contents/MacOS/adletic", args = ["-e", "/Users/firazfhansurie/.config/adletic/welcome.sh"] }
+command = { program = "/Applications/AIOS.app/Contents/MacOS/adletic", args = ["-e", "/Users/firazfhansurie/.config/adletic/welcome.sh"] }
 
 [[keyboard.bindings]]
 # ⌃⇧F / ⌃⇧B — fast scrollback search.
@@ -251,11 +260,6 @@ key = "W"
 mods = "Command"
 chars = "\u0001x"
 
-# ========================================================================
-# Spawn working directory for ⇧⌘A — point at your main AIOS workspace.
-# ========================================================================
-
-
 # ⌘⇧F — fzf file picker. Sends Prefix+f (Ctrl-A then f) to tmux, popup
 # opens, pick a file, "@/abs/path" gets typed into the active prompt.
 [[keyboard.bindings]]
@@ -314,7 +318,30 @@ key = "J"
 mods = "Command"
 chars = "\u0001J"  # bound in tmux.conf
 
+# ⌥⌘D — drop-doc (native macOS file picker → @path tokens into the
+# active tmux pane). Routed via `tmux -L adletic run-shell` so TMUX_PANE
+# is set inside drop-doc.sh and `tmux send-keys` lands on the focused
+# pane. ⇧⌘D is taken by horizontal split.
+[[keyboard.bindings]]
+key = "D"
+mods = "Command|Alt"
+command = { program = "/opt/homebrew/bin/tmux", args = ["-L", "adletic", "run-shell", "/Users/firazfhansurie/.config/adletic/helpers/drop-doc.sh"] }
+
+# ⌥⌘V — voice → text (toggle).
+# First press: starts recording in the background (mic via ffmpeg).
+# Second press: stops, transcribes via local Whisper on :2022, types
+#               the text into the pane that was active when recording
+#               started, plays a Glass.aiff "done" chime.
+# Status-bar [voice] pill mirrors the state — amber "🔴 rec" while live.
+[[keyboard.bindings]]
+key = "V"
+mods = "Command|Alt"
+command = { program = "/Users/firazfhansurie/.config/adletic/helpers/stt-toggle.sh" }
+
 [general]
+# Cold-start cwd for new windows. Home by default; change to your AIOS
+# workspace (e.g. ~/Repo/firaz/adletic/aios-firaz) if you want every new
+# window to land there.
 working_directory = "/Users/firazfhansurie"
 live_config_reload = true
 
@@ -392,3 +419,12 @@ color = "#f26522"
 key = "Q"
 mods = "Command"
 command = { program = "/Users/firazfhansurie/.config/adletic/helpers/confirm-quit.sh", args = [] }
+
+# ⌘B — AIOS HUD sidebar toggle (show / hide). Sends Prefix+b (Ctrl-A then b)
+# which is bound in ~/.config/adletic/tmux.conf to aios-hud-toggle.sh.
+[[keyboard.bindings]]
+# ⌘B — AIOS HUD sidebar toggle. Smart wrapper: toggles in-place if tmux
+# is running, otherwise launches a new Adletic window with HUD attached.
+key = "B"
+mods = "Command"
+command = { program = "/Users/firazfhansurie/Repo/firaz/terminal/scripts/aios-hud-smart.sh", args = [] }
